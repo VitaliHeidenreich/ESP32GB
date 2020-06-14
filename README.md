@@ -1,7 +1,12 @@
 # ESP32GB
-ESP32GB
 
 
-IDE: Codeblocks
+**IDE: Codeblocks**
 
-Language: C
+**Program is written in Language C.**
+
+Important halpful links:
+* https://izik1.github.io/gbops/index.html
+* https://bgb.bircd.org/pandocs.htm
+* http://imrannazar.com/GameBoy-Emulation-in-JavaScript:-The-CPU
+* http://www.z80.info/decoding.htm
