@@ -5,7 +5,7 @@
 
 **Program is written in Language C.**
 
-Important halpful links:
+Important helpful links:
 * https://izik1.github.io/gbops/index.html
 * https://bgb.bircd.org/pandocs.htm
 * http://imrannazar.com/GameBoy-Emulation-in-JavaScript:-The-CPU
