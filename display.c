@@ -59,7 +59,6 @@ void display_close( display* disp )
 {
     free(disp);
     SDL_Quit( );
-    fclose(fDebug);
 }
 
 // Einlesen der Tasten über SDL2

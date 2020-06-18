@@ -10,30 +10,6 @@
 #include "cpu.h"
 #include "main.h"
 
-#define     INCREMENT(x) (prog->pc = prog->pc + (x));
-
-#define     CARRY_V 0xf
-
-#define     REG_A   (prog->reg.a)
-#define     REG_F   (prog->reg.f)
-#define     REG_AF  (prog->reg.af)
-
-#define     REG_C   (prog->reg.c)
-#define     REG_B   (prog->reg.b)
-#define     REG_BC  (prog->reg.bc)
-
-#define     REG_D   (prog->reg.d)
-#define     REG_E   (prog->reg.e)
-#define     REG_DE  (prog->reg.de)
-
-#define     REG_L   (prog->reg.l)
-#define     REG_H   (prog->reg.h)
-#define     REG_HL  (prog->reg.hl)
-
-
-#define PC (prog->pc)
-#define SP (prog->sp)
-
 // Flagsposition
 #define ZERO        0b10000000
 #define NEGATIVE    0b01000000
@@ -140,43 +116,43 @@ void gb_opcode_exec( )
     // CPU Anweisungen
     switch( prog->opcode )
     {
-    case 0x00: // OK
+    case 0x00:
         // nop
         INCREMENT( 1 );
         break;
 
-    case 0x01: // OK
+    case 0x01:
         // LD BC,u16
         REG_BC = get_2byteData(  );
         INCREMENT( 3 );
         break;
 
-    case 0x02: // OK
+    case 0x02:
         // LD (BC),A
         write_1byteData( REG_BC, REG_A );
         INCREMENT( 1 );
         break;
 
-    case 0x03: // OK
+    case 0x03:
         // INC BC
         REG_BC ++;
         INCREMENT( 1 );
         break;
-    case 0x04: //OK
+    case 0x04:
         // INC B
         setFlags_for_Inc_1Byte( REG_B );
         REG_B ++;
         INCREMENT( 1 );
         break;
 
-    case 0x05: // OK
+    case 0x05:
         // DEC B
         setFlags_for_Dec_1Byte( REG_B );
         REG_B --;
         INCREMENT( 1 );
         break;
 
-    case 0x06:  // OK
+    case 0x06:
         // LD B,u8
         REG_B = get_1byteData(  );
         INCREMENT( 2 );
@@ -188,22 +164,22 @@ void gb_opcode_exec( )
         INCREMENT( 1 );
         break;
 
-    case 0x08: // OK
+    case 0x08:
         // LD (u16),SP
-        write_2byteData(  get_2byteData(  ), SP );
+        write_2byteData( get_2byteData( ), SP );
         INCREMENT( 3 );
         break;
 
-    case 0x09: // OK
-        // ADD HL,BC !!!
-        setFlags_for_Add_1Byte(  REG_L, REG_C );
+    case 0x09:
+        // ADD HL,BC
+        setFlags_for_Add_1Byte( REG_H, REG_B );
         REG_HL = REG_HL + REG_BC;
         INCREMENT( 1 );
         break;
 
-    case 0x0A: // OK
+    case 0x0A:
         // LD A,(BC)
-        REG_A = get_1byteDataFromAddr(  REG_BC );
+        REG_A = get_1byteDataFromAddr( REG_BC );
         INCREMENT( 1 );
         break;
 
@@ -236,7 +212,7 @@ void gb_opcode_exec( )
     case 0x0F: // OK
         // RRCA
         RRCA(&REG_A );
-        INCREMENT(1);
+        INCREMENT( 1 );
         break;
 
     case 0x10: // STOP !!! FAIL
@@ -288,10 +264,10 @@ void gb_opcode_exec( )
         INCREMENT( 1 );
         break;
 
-    case 0x18: // !!! INCREMENT?
+    case 0x18:
         // JR i8
         mySignVal = get_1byteSignedData();
-        INCREMENT(2);
+        INCREMENT( 2 );
         PC = PC + mySignVal;
         break;
 
@@ -304,7 +280,7 @@ void gb_opcode_exec( )
 
     case 0x1A:
         // LD A,(DE)
-        REG_A = get_1byteDataFromAddr(  REG_DE);
+        REG_A = get_1byteDataFromAddr( REG_DE );
         INCREMENT( 1 );
         break;
 
@@ -322,15 +298,15 @@ void gb_opcode_exec( )
         break;
 
     case 0x1D:
-        // DEC L
+        // DEC E
         setFlags_for_Dec_1Byte(  REG_E );
         REG_E --;
-        INCREMENT( 1 );get_1byteData( );
+        INCREMENT( 1 );
         break;
 
     case 0x1E:
         // LD E, u8
-        REG_E = get_1byteData(  );
+        REG_E = get_1byteData( );
         INCREMENT( 2 );
         break;
 
@@ -356,7 +332,7 @@ void gb_opcode_exec( )
 
     case 0x22: // !!!
         // LD (HL+),A
-        write_1byteData( REG_HL, REG_A);
+        write_1byteData( REG_HL, REG_A );
         REG_HL ++;
         INCREMENT( 1 );
         break;
@@ -403,12 +379,12 @@ void gb_opcode_exec( )
 
     case 0x29:
         // ADD HL,HL
-        setFlags_for_Add_1Byte( REG_L, REG_L );
+        setFlags_for_Add_1Byte( REG_H, REG_H );
         REG_HL = REG_HL + REG_HL;
         INCREMENT( 1 );
         break;
 
-    case 0x2A: // !!!
+    case 0x2A:
         // LD A,(HL+)
         REG_A = get_1byteDataFromAddr( REG_HL );
         REG_HL++;
@@ -462,9 +438,9 @@ void gb_opcode_exec( )
         INCREMENT( 3 );
         break;
 
-    case 0x32: // !!!
+    case 0x32:
         // LD (HL-),A
-        write_1byteData(  REG_HL, REG_A);
+        write_1byteData( REG_HL, REG_A);
         REG_HL--;
         INCREMENT( 1 );
         break;
@@ -511,19 +487,19 @@ void gb_opcode_exec( )
 
     case 0x39: // !!!
         // ADD HL,SP
-        setFlags_for_Add_1Byte(  REG_L, SP & 0x00ff );
+        setFlags_for_Add_1Byte(  REG_H,((SP & 0xff00) >> 8));
         REG_HL = REG_HL + prog->sp;
         INCREMENT( 1 );
         break;
 
-    case 0x3A: // !!!
+    case 0x3A:
         // LD A,(HL-)
         REG_A = get_1byteDataFromAddr( REG_HL );
         REG_HL--;
         INCREMENT( 1 );
         break;
 
-    case 0x3B: // OK
+    case 0x3B:
         // DEC SP
         SP --;
         INCREMENT( 1 );
@@ -545,7 +521,7 @@ void gb_opcode_exec( )
 
     case 0x3E:
         // LD A,u8
-        REG_A = get_1byteData(  );
+        REG_A = get_1byteData( );
         INCREMENT( 2 );
         break;
 
@@ -556,7 +532,7 @@ void gb_opcode_exec( )
         break;
 
     case 0x40:
-        // LD B,B !!!
+        // LD B,B
         REG_B = REG_B;
         INCREMENT( 1 );
         break;
@@ -593,7 +569,7 @@ void gb_opcode_exec( )
 
     case 0x46:
         // LD B,(HL)
-        REG_B = get_1byteDataFromAddr(  REG_HL );
+        REG_B = get_1byteDataFromAddr( REG_HL );
         INCREMENT( 1 );
         break;
 
@@ -611,7 +587,7 @@ void gb_opcode_exec( )
 
     case 0x49:
         // LD C,C
-        // nop
+        REG_C = REG_C;
         INCREMENT( 1 );
         break;
 
@@ -641,7 +617,7 @@ void gb_opcode_exec( )
 
     case 0x4E:
         // LD C,(HL)
-        REG_C = get_1byteDataFromAddr(  REG_HL );
+        REG_C = get_1byteDataFromAddr( REG_HL );
         INCREMENT( 1 );
         break;
 
@@ -670,7 +646,7 @@ void gb_opcode_exec( )
         break;
 
     case 0x53:
-        // LD D,Ep->memory
+        // LD D,E
         REG_D = REG_E;
         INCREMENT( 1 );
         break;
@@ -700,8 +676,8 @@ void gb_opcode_exec( )
         break;
 
     case 0x58:
-        // LD D,B
-        REG_D = REG_B;
+        // LD E,B
+        REG_E = REG_B;
         INCREMENT( 1 );
         break;
 
@@ -784,7 +760,7 @@ void gb_opcode_exec( )
 
     case 0x66:
         // LD H,(HL)
-        REG_H = get_1byteDataFromAddr(  REG_HL );
+        REG_H = get_1byteDataFromAddr( REG_HL );
         INCREMENT( 1 );
         break;
 
@@ -832,7 +808,7 @@ void gb_opcode_exec( )
 
     case 0x6E:
         // LD L,(HL)
-        REG_L = get_1byteDataFromAddr(  REG_HL );
+        REG_L = get_1byteDataFromAddr( REG_HL );
         INCREMENT( 1 );
         break;
 
@@ -844,7 +820,7 @@ void gb_opcode_exec( )
 
     case 0x70:
         // LD (HL),B
-        write_1byteData(  REG_HL, REG_B );
+        write_1byteData( REG_HL, REG_B );
         INCREMENT( 1 );
         break;
 
@@ -886,7 +862,7 @@ void gb_opcode_exec( )
 
     case 0x77:
         // LD (HL),A
-        write_1byteData(  REG_HL, REG_A );
+        write_1byteData( REG_HL, REG_A );
         INCREMENT( 1 );
         break;
 
@@ -927,19 +903,19 @@ void gb_opcode_exec( )
         break;
     case 0x7E:
         // LD A,(HL)
-        REG_A = get_1byteDataFromAddr(  REG_HL );
+        REG_A = get_1byteDataFromAddr( REG_HL );
         INCREMENT( 1 );
         break;
 
     case 0x7F:
         // LD A,A
-        REG_A = REG_H;
+        REG_A = REG_A;
         INCREMENT( 1 );
         break;
 
     case 0x80:
         // ADD A,B
-        setFlags_for_Add_1Byte(  REG_A, REG_B );
+        setFlags_for_Add_1Byte( REG_A, REG_B );
         REG_A = REG_A + REG_B;
         INCREMENT( 1 );
         break;
@@ -981,27 +957,27 @@ void gb_opcode_exec( )
 
     case 0x86:
         // ADD A,(HL)
-        setFlags_for_Add_1Byte(  REG_A, get_1byteDataFromAddr(  REG_HL ) );
-        REG_A = REG_A + get_1byteDataFromAddr(  REG_HL ) ;
+        setFlags_for_Add_1Byte(  REG_A, get_1byteDataFromAddr( REG_HL ) );
+        REG_A = REG_A + get_1byteDataFromAddr( REG_HL ) ;
         INCREMENT( 1 );
         break;
 
     case 0x87:
         // ADD A,A
-        setFlags_for_Add_1Byte(  REG_A, REG_A );
+        setFlags_for_Add_1Byte( REG_A, REG_A );
         REG_A = REG_A + REG_A;
         INCREMENT( 1 );
         break;
 
     case 0x88:
         // ADC A,B
-        REG_A = REG_A + setFlags_for_Adc_1Byte(  REG_A, REG_B );
+        REG_A = REG_A + setFlags_for_Adc_1Byte( REG_A, REG_B );
         INCREMENT( 1 );
         break;
 
     case 0x89:
         // ADD A,C
-        REG_A = REG_A + setFlags_for_Adc_1Byte(  REG_A, REG_C );
+        REG_A = REG_A + setFlags_for_Adc_1Byte( REG_A, REG_C );
         INCREMENT( 1 );
         break;
 
@@ -1037,7 +1013,7 @@ void gb_opcode_exec( )
 
     case 0x8F:
         // ADD A,A
-        REG_A = REG_A + setFlags_for_Adc_1Byte(  REG_A, REG_A );
+        REG_A = REG_A + setFlags_for_Adc_1Byte( REG_A, REG_A );
         INCREMENT( 1 );
         break;
 
@@ -1147,7 +1123,7 @@ void gb_opcode_exec( )
 
     case 0xA0:
         // AND A,B
-        setFlags_for_And_1Byte(  REG_A, REG_B );
+        setFlags_for_And_1Byte( REG_A, REG_B );
         REG_A = REG_A & REG_B;
         INCREMENT(1);
         break;
@@ -1211,34 +1187,34 @@ void gb_opcode_exec( )
     case 0xA9:
         // XOR A,C
         setFlags_for_Xor_1Byte(  REG_A, REG_C );
-        REG_A = REG_A ^ REG_B;
+        REG_A = REG_A ^ REG_C;
         INCREMENT(1);
         break;
 
     case 0xAA:
         // XOR A,D
         setFlags_for_Xor_1Byte( REG_A, REG_D );
-        REG_A = REG_A ^ REG_B;
+        REG_A = REG_A ^ REG_D;
         INCREMENT(1);
         break;
 
     case 0xAB:
         // XOR A,E
         setFlags_for_Xor_1Byte( REG_A, REG_E );
-        REG_A = REG_A ^ REG_B;
+        REG_A = REG_A ^ REG_E;
         INCREMENT(1);
         break;
 
     case 0xAC:
         // XOR A,H
         setFlags_for_Xor_1Byte( REG_A, REG_H );
-        REG_A = REG_A ^ REG_B;
+        REG_A = REG_A ^ REG_H;
         INCREMENT(1);
         break;
     case 0xAD:
         // XOR A,L
         setFlags_for_Xor_1Byte(  REG_A, REG_L );
-        REG_A = REG_A ^ REG_B;
+        REG_A = REG_A ^ REG_L;
         INCREMENT(1);
         break;
 
@@ -1368,8 +1344,8 @@ void gb_opcode_exec( )
 
     case 0xC1:
         // POP BC
-        REG_BC = read_from_stack(  );
         INCREMENT( 1 );
+        REG_BC = read_from_stack( );
         break;
 
     case 0xC2:
@@ -1387,9 +1363,9 @@ void gb_opcode_exec( )
         PC = myVal;
         break;
 
-    case 0xC4: // CALL !!!
+    case 0xC4:
         // CALL NZ,u16
-        myVal = get_2byteData(  );
+        myVal = get_2byteData( );
         INCREMENT( 3 );
         if( !getZeroFlag( ) )
         {
@@ -1411,19 +1387,18 @@ void gb_opcode_exec( )
         INCREMENT( 2 );
         break;
 
-    case 0xC7:
-        // RST 00h
-        INCREMENT( 1 );
-        push_to_stack( PC );
-        PC = 0x00;
-        break;
+//    case 0xC7:
+//        // RST 00h
+//        INCREMENT( 1 );
+//        push_to_stack( PC );
+//        PC = 0x00;
+//        break;
 
     case 0xC8:
         // RET NZ
-        myVal = read_from_stack( );
         INCREMENT( 1 );
         if ( getZeroFlag( ) )
-            PC = myVal;
+            PC = read_from_stack( );
         break;
 
     case 0xC9:
@@ -1443,11 +1418,9 @@ void gb_opcode_exec( )
 
     case 0xCB:
         // PREFIX CB
-        printf("\n --- Sonderfunktion! --- \n");
         INCREMENT( 1 );
-        prog->opcode = prog->memory[ prog->pc ];
+        prog->opcode = prog->memory[ PC ];
         prog->tikz += InstructionTicks_0xCB[ prog->opcode ];
-        // gb_opcode_fetch( ); Nicht möglich!!!
         gb_exec_prefix( );
         break;
 
@@ -1474,12 +1447,11 @@ void gb_opcode_exec( )
         PC = 0x08;
         break;
 
-    case 0xD0: // !!!!!!!!!!!!!!!!!!!
+    case 0xD0:
         // RET NC
-        myVal = read_from_stack(  );
         INCREMENT( 1 );
         if ( !getCarryFlag(  ) )
-            PC = myVal;
+            PC = read_from_stack(  );
         break;
 
     case 0xD1:
@@ -1528,10 +1500,9 @@ void gb_opcode_exec( )
 
     case 0xD8:
         // RET C
-        myVal = read_from_stack( );
         INCREMENT( 1 );
         if ( getCarryFlag( ) )
-            PC = myVal;
+            PC = read_from_stack( );
         break;
 
     case 0xD9:
@@ -1541,18 +1512,18 @@ void gb_opcode_exec( )
         break;
 
     case 0xDA:
-        // JP Z,u16
-        myVal = get_2byteData(  );
+        // JP C,u16
+        myVal = get_2byteData( );
         INCREMENT( 3 );
         if( getCarryFlag( ) )
             PC = myVal;
         break;
 
     case 0xDC:
-        // CALL NC,u16
+        // CALL C,u16
         myVal = get_2byteData(  );
         INCREMENT( 3 );
-        if( getCarryFlag(  ) ){
+        if( getCarryFlag( ) ){
             push_to_stack( PC );
             PC = myVal;
         }
@@ -1572,14 +1543,14 @@ void gb_opcode_exec( )
 
     case 0xE2:
         // LD (FF00+C),A
-        write_1byteData(  0xFF00 + REG_C, REG_A);
+        write_1byteData( 0xFF00 + REG_C, REG_A);
         INCREMENT( 1 );
         break;
 
     case 0xE5:
         // PUSH HL
         INCREMENT( 1 );
-        push_to_stack(  REG_HL );
+        push_to_stack( REG_HL );
         break;
 
     case 0xE6:
@@ -1611,8 +1582,7 @@ void gb_opcode_exec( )
 
     case 0xEA:
         // LD (u16),A !!!
-        myVal = get_2byteData( );
-        write_1byteData( myVal, REG_A );
+        write_1byteData( get_2byteData( ), REG_A );
         INCREMENT( 3 );
         break;
 
@@ -1667,10 +1637,15 @@ void gb_opcode_exec( )
         PC = 0x30;
         break;
 
-    case 0xF8: // !!!
+    case 0xF8:
         // LD HL,SP+i8
-        setFlagsForAdd2Byte(REG_HL, SP + get_1byteSignedData());
-        REG_HL = SP + get_1byteSignedData();
+        mySignVal = get_1byteSignedData();
+        REG_HL = SP + mySignVal;
+        setFlags(0,0,0,0);
+        if (((SP ^ mySignVal ^ REG_HL) & 0x100) == 0x100)
+            setFlags(0,0,3,1);
+        if (((SP ^ mySignVal ^ REG_HL) & 0x10) == 0x10)
+            setFlags(0,0,1,0);
         INCREMENT( 2 );
         break;
 

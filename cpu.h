@@ -22,12 +22,39 @@
 #define CHARSET_START 0x050
 #define CHARSET_END   0x0A0
 
+/*************************************************************
+* simplify register handling
+*************************************************************/
+#define     INCREMENT(x) (prog->pc = prog->pc + (x));
+
+#define     CARRY_V 0xf
+
+#define     REG_A   (prog->reg.a)
+#define     REG_F   (prog->reg.f)
+#define     REG_AF  (prog->reg.af)
+
+#define     REG_C   (prog->reg.c)
+#define     REG_B   (prog->reg.b)
+#define     REG_BC  (prog->reg.bc)
+
+#define     REG_D   (prog->reg.d)
+#define     REG_E   (prog->reg.e)
+#define     REG_DE  (prog->reg.de)
+
+#define     REG_L   (prog->reg.l)
+#define     REG_H   (prog->reg.h)
+#define     REG_HL  (prog->reg.hl)
+
+
+#define PC (prog->pc)
+#define SP (prog->sp)
+///***********************************************************
+
 
 #define NUM_REGS      16
 #define NUM_KEYS      6         // 6 Tasten am GB
 
 #define DEBUG         0
-FILE* fDebug;
 
 #define MAX_TICKS     69905
 
@@ -93,6 +120,7 @@ struct gameboy_t{
     registers reg;
     // Interrupt Master Enable Flag (Write Only)
     uint8_t IME;
+    uint8_t IR_req;
     // Für Grafikausgabe 160 Spalten und 144 Zeilen
     uint8_t ausgabeGrafik[144][160];
     // Für BIOS anzeigen --> just for fun

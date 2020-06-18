@@ -13,6 +13,21 @@
 #define TIMER_INIT_LOAD_FF06         (prog->memory[0xFF06])
 #define TIMER_CONTROL_REGISTER_FF07  (prog->memory[0xFF07])
 
+// Interrupt registers
+#define IME                    (prog->IME)
+// Interrupt enable registers
+#define V_BLANK_IR_ENABLED     (prog->memory[0xFFFF] & (1<<0))
+#define LCD_STAT_IR_ENABLED    (prog->memory[0xFFFF] & (1<<1))
+#define TIMER_IR_ENABLED       (prog->memory[0xFFFF] & (1<<2))
+#define SERIAL_IR_ENABLED      (prog->memory[0xFFFF] & (1<<3))
+#define JOYPAD_IR_ENABLED      (prog->memory[0xFFFF] & (1<<4))
+// Interrupt flags registers
+#define V_BLANK_IR_SET         (prog->memory[0xFF0F] & (1<<0))
+#define LCD_STAT_IR_SET        (prog->memory[0xFF0F] & (1<<1))
+#define TIMER_IR_SET           (prog->memory[0xFF0F] & (1<<2))
+#define SERIAL_IR_SET          (prog->memory[0xFF0F] & (1<<3))
+#define JOYPAD_IR_SET          (prog->memory[0xFF0F] & (1<<4))
+
 
 #define CPU_SPEED_GAMEBOY             4194304
 
@@ -65,7 +80,6 @@ gameboy* gb_start( )
     p->memory[0xFF49] = 0xFF ;
     p->memory[0xFF4A] = 0x00 ;
     p->memory[0xFF4B] = 0x00 ;
-    p->memory[0xFFFF] = 0x00 ;
 
     // Timer
     p->deviderVariable = 0x00;
@@ -76,6 +90,11 @@ gameboy* gb_start( )
     p->clockSpeedCycles= CPU_SPEED_GAMEBOY/4096;
     p->tikz = 0;
     p->displayMode = 4;
+
+    // Interrupts
+    p->IR_req = 0;
+    p->memory[0xFF0F] = 0x00 ;
+    p->memory[0xFFFF] = 0x00 ;
 
     return p;
 }
@@ -136,7 +155,6 @@ void gb_program_cycle( )
 
 // ####################################################################################
 // ####################################################################################
-
 // ####################################################################################
 void gb_update_timer( uint16_t cycles )
 {
@@ -162,11 +180,68 @@ void gb_update_timer( uint16_t cycles )
 }
 
 // ####################################################################################
+/**************************************************************************************
+*  Interrupt handling function
+*     Bit 0: V-Blank  Interrupt Request (INT 40h)  (1=Request)
+*     Bit 1: LCD STAT Interrupt Request (INT 48h)  (1=Request)
+*     Bit 2: Timer    Interrupt Request (INT 50h)  (1=Request)
+*     Bit 3: Serial   Interrupt Request (INT 58h)  (1=Request)
+*     Bit 4: Joypad   Interrupt Request (INT 60h)  (1=Request)
+**************************************************************************************/
 void gb_interrupts( )
 {
-    if( prog->IME )
+    // Only if the Interrupt Master Enable Flag is set
+    if( IME )
     {
-        // ToDo
+        // highest priority (0) have to be executed first if requested
+        // First V-Blank interrupt because of the highest priority
+        if( V_BLANK_IR_ENABLED )
+        {
+            if( V_BLANK_IR_SET )
+            {
+                // Disable both IME and the IR Request
+                IME = 0;
+                prog->memory[0xFF0F] &= ~(1 << 0);
+                prog->halt = 0;
+                // Trigger INT 40h
+                push_to_stack( PC );
+                PC = 0x40;
+                // Nächter push soll unterbunden werden!
+                //prog->IR_req = 1;
+            }
+        }
+
+        if( LCD_STAT_IR_ENABLED )
+        {
+            if( LCD_STAT_IR_SET )
+            {
+
+            }
+        }
+
+        if( TIMER_IR_ENABLED )
+        {
+            if( TIMER_IR_SET )
+            {
+
+            }
+        }
+
+        if( SERIAL_IR_ENABLED )
+        {
+            if( SERIAL_IR_SET )
+            {
+
+            }
+        }
+
+        if( JOYPAD_IR_ENABLED )
+        {
+            if( JOYPAD_IR_SET )
+            {
+
+            }
+        }
     }
 }
 
@@ -184,6 +259,8 @@ uint8_t get_1byteDataFromAddr(  uint16_t addr )
     // Read Buttons TBD -> 0 pressed, 1 released
     if( addr == 0xFF00 )
         return ( prog->memory[ addr ] | 0xCF );
+    else if( addr == 0xFF80 )
+        return 0;
     // return whats in memory :-)
     else
         return ( prog->memory[ addr ] );
@@ -196,7 +273,7 @@ void write_1byteData( uint16_t addr, uint8_t data )
     // Kein Schreiben auf das ROM erlaubt
     if ( (addr < 0x8000) || (( addr >= 0xFEA0 ) && ( addr < 0xFEFF)) )
     {
-        printf("\nFehler: Schreiben auf Adresse: 0x%04X nicht zugelassen. (0x%02X at PC 0x%04X)", addr, prog->opcode, prog->pc);
+        //printf("\nError 404: Schreiben auf Adresse: 0x%04X nicht zugelassen. (0x%02X at PC 0x%04X)", addr, prog->opcode, prog->pc);
     }
     // writing to ECHO ram also writes in RAM
     else if ( ( addr >= 0xE000 ) && (addr < 0xFE00) )
@@ -229,7 +306,11 @@ void write_1byteData( uint16_t addr, uint8_t data )
     }
     else
     {
-       // nop
+//       if( (addr == 0xFFFF) || (addr == 0xFFFF) )
+//       {
+//           printf("\nInterrupt register will be written by 0x%02X\n",data);
+//           getchar();
+//       }
     }
 }
 
@@ -276,10 +357,18 @@ int get_1byteSignedDataFromAddr( uint16_t addr )
 // TESTED!
 void push_to_stack( uint16_t data )
 {
-    prog->memory[ prog->sp ] = ((data >> 8) & 0xff);
-    prog->sp--;
-    prog->memory[ prog->sp ] = (data & 0xff);
-    prog->sp--;
+        prog->memory[ prog->sp ] = ((data >> 8) & 0xff);
+        prog->sp--;
+        prog->memory[ prog->sp ] = (data & 0xff);
+        prog->sp--;
+
+        //print stack
+//        uint16_t i = prog->sp + 1;
+//        while( i <= 0xCFFF )
+//        {
+//            printf(" --- 0x %02X %02X\n", prog->memory[ i+1 ], prog->memory[ i ]);
+//            i +=2;
+//        }
 }
 // TESTED!
 uint16_t read_from_stack( )
@@ -458,7 +547,7 @@ void setFlags_for_Sub_1Byte(  uint8_t oldVal, uint8_t valToSub )
     if( oldVal == valToSub )
         setFlags( 1, 3, 3, 3 );
     // Half Carry flag !!!
-    if( (oldVal & 0x0f) < (valToSub & 0x0f) )
+    if (((oldVal - valToSub) & 0xF) > (oldVal & 0xF))
         setFlags( 3, 3, 1, 3 );
     // Carry flag
     if( oldVal < valToSub )
@@ -467,13 +556,16 @@ void setFlags_for_Sub_1Byte(  uint8_t oldVal, uint8_t valToSub )
 
 void setFlags_for_CP(  uint8_t oldVal, uint8_t valToSub )
 {
+    // Z N HC C
     setFlags( 0, 1, 0, 0 );
     // Zero flag
     if( oldVal == valToSub )
         setFlags( 1, 3, 3, 3 );
     // Half Carry flag !!!
-    if( (oldVal & 0x0f) < (valToSub & 0x0f) )
+    if (((oldVal - valToSub) & 0xF) > (oldVal & 0xF))
+    {
         setFlags( 3, 3, 1, 3 );
+    }
     // Carry flag
     if( oldVal < valToSub )
         setFlags( 3, 3, 3, 1 );
@@ -558,7 +650,7 @@ void setFlagsForAdd2Byte( uint16_t a, uint16_t b)
     setFlags(0,0,0,0);
     if( ((a & 0xFFF) + (b & 0xFFF))>0xFFF )
         setFlags(3,3,1,3);
-     if( (a+b)>0xFFFF )
+    if( (a+b) > 0xFFFF )
         setFlags(3,3,3,1);
 }
 
