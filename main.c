@@ -14,7 +14,7 @@
 #define FPS_Rate 60
 
 // it is just an example how to use roms
-char* filename = "../games/Tetris.gb";
+char* filename = "../games/DrMario.gb";
 SDL_Event ev;
 
 int main(int argc, char** argv)
@@ -43,6 +43,20 @@ int main(int argc, char** argv)
 
     int running = 1;
     unsigned int lastTime = 0, currentTime;
+
+    // Test
+    uint16_t val = 0;
+    uint16_t DebugAddr = 0x2F0;
+    val = 0x2F0 - 10;
+    while( val < (DebugAddr + 10) )
+    {
+        if(val == DebugAddr)
+            printf(">>> ");
+        else
+            printf("    ");
+        printf("0x%04X: 0x%02X\n",val,prog->memory[ val ]);
+        val ++;
+    }
 
     while (running)
     {

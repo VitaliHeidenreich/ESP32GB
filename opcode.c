@@ -9,6 +9,8 @@
 #include <inttypes.h>
 #include "cpu.h"
 #include "main.h"
+// only for debugger
+#include <windows.h>
 
 // Flagsposition
 #define ZERO        0b10000000
@@ -96,7 +98,7 @@ void gb_opcode_exec( )
 {
     #if DEBUG_STEP
         char myChar;
-        static uint16_t stepNum = 0;
+        static uint32_t stepNum = 0;
         static uint16_t stopOnPC = 0x022f;
     #endif // DEBUG_STEP
     uint16_t myVal = 0;
@@ -109,7 +111,7 @@ void gb_opcode_exec( )
     // Warten auf Event (Eingabe, Interrupt)
     if( prog->halt )
     {
-        printf("0x10! Programm gestoppt, Eingabe erforderlich!\n");
+        //printf("0x10! Programm gestoppt, Eingabe erforderlich!\n");
         return;
     }
 
@@ -172,7 +174,7 @@ void gb_opcode_exec( )
 
     case 0x09:
         // ADD HL,BC
-        setFlags_for_Add_1Byte( REG_H, REG_B );
+        setFlags_for_Add_2Byte( REG_HL, REG_BC );
         REG_HL = REG_HL + REG_BC;
         INCREMENT( 1 );
         break;
@@ -183,76 +185,77 @@ void gb_opcode_exec( )
         INCREMENT( 1 );
         break;
 
-    case 0x0B: // OK
+    case 0x0B:
         // DEC BC
         REG_BC --;
         INCREMENT( 1 );
         break;
 
-    case 0x0C: // OK
+    case 0x0C:
         // INC C
         setFlags_for_Inc_1Byte(  REG_C );
         REG_C ++;
         INCREMENT( 1 );
         break;
 
-    case 0x0D: // OK
+    case 0x0D:
         //DEC C
         setFlags_for_Dec_1Byte(  REG_C );
         REG_C --;
         INCREMENT( 1 );
         break;
 
-    case 0x0E: // OK
+    case 0x0E:
         // LD C,u8
         REG_C = get_1byteData(  );
         INCREMENT( 2 );
         break;
 
-    case 0x0F: // OK
+    case 0x0F:
         // RRCA
         RRCA(&REG_A );
         INCREMENT( 1 );
         break;
 
-    case 0x10: // STOP !!! FAIL
+    case 0x10:
+        // STOP
         prog->stop = 1;
         INCREMENT( 2 );
         break;
 
-    case 0x11: // OK
+    case 0x11:
         // LD DE,u16
         REG_DE = get_2byteData(  );
         INCREMENT( 3 );
         break;
 
-    case 0x12: // OK
+    case 0x12:
         // LD (DE),A
-        write_1byteData(  REG_DE, REG_A);
+        write_1byteData( REG_DE, REG_A);
         INCREMENT( 1 );
         break;
 
-    case 0x13: // OK
+    case 0x13:
         // INC DE
         REG_DE ++;
         INCREMENT( 1 );
         break;
 
-    case 0x14: // OK
+    case 0x14:
         // INC D
-        setFlags_for_Inc_1Byte(  REG_D );
+        setFlags_for_Inc_1Byte( REG_D );
         REG_D ++;
         INCREMENT( 1 );
         break;
 
-    case 0x15: // OK
+    case 0x15:
         // DEC D
         setFlags_for_Dec_1Byte(  REG_D );
         REG_D --;
         INCREMENT( 1 );
         break;
 
-    case 0x16: // OK
+    case 0x16:
         // LD D,u8
         REG_D = get_1byteData(  );
         INCREMENT( 2 );
@@ -271,9 +274,9 @@ void gb_opcode_exec( )
         PC = PC + mySignVal;
         break;
 
-    case 0x19: // FUCK!
+    case 0x19:
         // ADD HL,DE !!!
-        setFlags_for_Add_1Byte(  REG_H, REG_D );
+        setFlags_for_Add_2Byte( REG_HL, REG_DE );
         REG_HL = REG_HL + REG_DE;
         INCREMENT( 1 );
         break;
@@ -292,14 +295,14 @@ void gb_opcode_exec( )
 
     case 0x1C:
         // INC E
-        setFlags_for_Inc_1Byte(  REG_E );
+        setFlags_for_Inc_1Byte( REG_E );
         REG_E ++;
         INCREMENT( 1 );
         break;
 
     case 0x1D:
         // DEC E
-        setFlags_for_Dec_1Byte(  REG_E );
+        setFlags_for_Dec_1Byte( REG_E );
         REG_E --;
         INCREMENT( 1 );
         break;
@@ -369,7 +372,7 @@ void gb_opcode_exec( )
         INCREMENT( 1 );
         break;
 
-    case 0x28: // !!!
+    case 0x28:
         // JR Z,i8
         mySignVal = get_1byteSignedData( );
         INCREMENT( 2 );
@@ -379,7 +382,7 @@ void gb_opcode_exec( )
 
     case 0x29:
         // ADD HL,HL
-        setFlags_for_Add_1Byte( REG_H, REG_H );
+        setFlags_for_Add_2Byte( REG_HL, REG_HL );
         REG_HL = REG_HL + REG_HL;
         INCREMENT( 1 );
         break;
@@ -424,7 +427,7 @@ void gb_opcode_exec( )
         INCREMENT( 1 );
         break;
 
-    case 0x30: // FAIL !!!
+    case 0x30:
         // JR NC,i8
         mySignVal = get_1byteSignedData();
         INCREMENT( 2 );
@@ -485,9 +488,9 @@ void gb_opcode_exec( )
             PC = PC + mySignVal;
         break;
 
-    case 0x39: // !!!
+    case 0x39:
         // ADD HL,SP
-        setFlags_for_Add_1Byte(  REG_H,((SP & 0xff00) >> 8));
+        setFlags_for_Add_2Byte( REG_HL,SP);
         REG_HL = REG_HL + prog->sp;
         INCREMENT( 1 );
         break;
@@ -665,7 +668,7 @@ void gb_opcode_exec( )
 
     case 0x56:
         // LD D,(HL)
-        REG_D = get_1byteDataFromAddr(  REG_HL );
+        REG_D = get_1byteDataFromAddr( REG_HL );
         INCREMENT( 1 );
         break;
 
@@ -704,6 +707,7 @@ void gb_opcode_exec( )
         REG_E = REG_H;
         INCREMENT( 1 );
         break;
+
     case 0x5D:
         // LD E,L
         REG_E = REG_L;
@@ -857,6 +861,7 @@ void gb_opcode_exec( )
     case 0x76:
         // HALT !!!
         prog->halt = 1;
+        //printf("\n ---------- HALT !!!! --------------- \n");
         INCREMENT( 1 );
         break;
 
@@ -1211,6 +1216,7 @@ void gb_opcode_exec( )
         REG_A = REG_A ^ REG_H;
         INCREMENT(1);
         break;
+
     case 0xAD:
         // XOR A,L
         setFlags_for_Xor_1Byte(  REG_A, REG_L );
@@ -1273,6 +1279,7 @@ void gb_opcode_exec( )
         REG_A = REG_A | REG_L;
         INCREMENT( 1 );
         break;
+
     case 0xB6:
         // OR A,(HL)
         setFlags_for_Or_1Byte(  REG_A, get_1byteDataFromAddr(  REG_HL ) );
@@ -1304,6 +1311,7 @@ void gb_opcode_exec( )
         setFlags_for_Sub_1Byte( REG_A, REG_D );
         INCREMENT( 1 );
         break;
+
     case 0xBB:
         // CP A,E
         setFlags_for_Sub_1Byte( REG_A, REG_E );
@@ -1311,7 +1319,6 @@ void gb_opcode_exec( )
         break;
 
     case 0xBC:
-
         // CP A,H
         setFlags_for_Sub_1Byte( REG_A, REG_H );
         INCREMENT( 1 );
@@ -1338,8 +1345,8 @@ void gb_opcode_exec( )
     case 0xC0: // !!!
         // RET NZ
         INCREMENT( 1 );
-        if ( !getZeroFlag(  ) )
-            PC = read_from_stack(  );
+        if ( !getZeroFlag( ) )
+            PC = read_from_stack( );
         break;
 
     case 0xC1:
@@ -1491,12 +1498,12 @@ void gb_opcode_exec( )
         INCREMENT( 2 );
         break;
 
-    case 0xD7:
-        // RST 10h
-        INCREMENT( 1 );
-        push_to_stack( PC );
-        PC = 0x10;
-        break;
+//    case 0xD7:
+//        // RST 10h
+//        INCREMENT( 1 );
+//        push_to_stack( PC );
+//        PC = 0x10;
+//        break;
 
     case 0xD8:
         // RET C
@@ -1529,6 +1536,19 @@ void gb_opcode_exec( )
         }
         break;
 
+    case 0xDE:
+        // SBC A,C
+        REG_A = REG_A - setFlags_for_Sbc_1Byte(  REG_A, get_1byteData() );
+        INCREMENT(1);
+        break;
+
+    case 0xDF:
+        // RST 38h
+        INCREMENT( 1 );
+        push_to_stack( PC );
+        prog->pc = 0x18;
+        break;
+
     case 0xE0:
         // LD (FF00+u8),A
         write_1byteData( (0xFF00 + get_1byteData( )), REG_A );
@@ -1555,17 +1575,17 @@ void gb_opcode_exec( )
 
     case 0xE6:
         // AND A,u8
-        setFlags_for_And_1Byte(  REG_A, get_1byteData(  ) );
-        REG_A = REG_A & get_1byteData(  );
+        setFlags_for_And_1Byte( REG_A, get_1byteData( ) );
+        REG_A = REG_A & get_1byteData( );
         INCREMENT( 2 );
         break;
 
-    case 0xE7:
-        // RST 20h
-        INCREMENT( 1 );
-        push_to_stack( PC );
-        PC = 0x20;
-        break;
+//    case 0xE7:
+//        // RST 20h
+//        INCREMENT( 1 );
+//        push_to_stack( PC );
+//        PC = 0x20;
+//        break;
 
     case 0xE8: // !!!
         // ADD SP,i8
@@ -1595,7 +1615,7 @@ void gb_opcode_exec( )
 
     case 0xF0:
         // LD A,(FF00+u8)
-        REG_A = get_1byteDataFromAddr(  0xFF00 + get_1byteData( ) );
+        REG_A = get_1byteDataFromAddr( 0xFF00 + get_1byteData( ) );
         INCREMENT( 2 );
         break;
 
@@ -1698,20 +1718,25 @@ void gb_opcode_exec( )
         }
         if( (!stepNum)  )
         {
-            printf("-->Menue: Trigger(i),BC(s),+10(z),+100(h),+1000(t),+65000(x): ");
+            printf("   -->Menue: Trigger(i),BC(s),+10(z),+100(h),+1000(t),+65000(x): ");
             myChar = getchar();
             if( myChar == 'i' )
             {
                 int i;
                 scanf("%x", &i); stopOnPC = (uint16_t)i;
                 printf("-->Val setted to 0x%04X", stopOnPC);
-                myChar = getchar();
+                Sleep(1000);
+                stepNum = 1000000;
             }
-            if (myChar == 's') REG_BC = 0x0101;
-            if( myChar == 'z' ) stepNum = 10;
-            if( myChar == 'h' ) stepNum = 100;
-            if( myChar == 't' ) stepNum = 1000;
-            if( myChar == 'x' ) stepNum = 65535;
+            else
+            {
+                //if (myChar == 's') REG_BC = 0x0101;
+                if( myChar == 'z' ) stepNum = 10;
+                if( myChar == 'h' ) stepNum = 100;
+                if( myChar == 't' ) stepNum = 1000;
+                if( myChar == 'x' ) stepNum = 65535;
+            }
+
             // Warte auf Zeilenumbruch
             while('\n'!=getchar());
         }
@@ -2972,7 +2997,7 @@ void gb_exec_prefix( )
         SET_fnx(5,&REG_A);
         break;
 
-            case 0xF0:
+    case 0xF0:
         // SET 6,B
         SET_fnx(6,&REG_B);
         break;
@@ -3058,7 +3083,7 @@ void gb_exec_prefix( )
 
     default:
         printf("Sonderfunktion nicht unterstuetzt: 0x%02X at addr.:%d\n",prog->opcode,PC);
-        return;
+        while(1){  }
         break;
     }
     // All 0xCB functions takes additional 1 byte

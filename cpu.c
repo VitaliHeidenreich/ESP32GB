@@ -259,8 +259,6 @@ uint8_t get_1byteDataFromAddr(  uint16_t addr )
     // Read Buttons TBD -> 0 pressed, 1 released
     if( addr == 0xFF00 )
         return ( prog->memory[ addr ] | 0xCF );
-    else if( addr == 0xFF80 )
-        return 0;
     // return whats in memory :-)
     else
         return ( prog->memory[ addr ] );
@@ -518,6 +516,17 @@ void setFlags_for_Add_1Byte(  uint8_t oldVal, uint8_t valToAdd )
         setFlags( 3, 3, 3, 1 );
 }
 
+void setFlags_for_Add_2Byte(  uint16_t oldVal, uint16_t valToAdd )
+{
+    uint16_t result = oldVal + valToAdd;
+    setFlags( 3, 0, 0, 0 );
+
+    if (result & 0x10000)
+        setFlags( 3, 0, 3, 1 );
+    if ((oldVal ^ valToAdd ^ (result & 0xFFFF)) & 0x1000)
+        setFlags( 3, 0, 1, 3 );
+}
+
 uint8_t setFlags_for_Adc_1Byte(  uint8_t oldVal, uint8_t valToAdd )
 {
     uint8_t iRet = 0;
@@ -661,7 +670,7 @@ void do_DAA(  )
     {
         if( getHalfCarryFlag( prog ) )
         {
-            prog->reg.a = prog->reg.a - 0x6;
+            prog->reg.a = (prog->reg.a - 0x6) & 0xFF;
         }
         if( getCarryFlag( prog ) )
         {

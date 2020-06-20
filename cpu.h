@@ -187,6 +187,7 @@ uint16_t read_from_stack( );
 // SET AND GET FLAGS
 void setFlags( uint8_t Z, uint8_t N, uint8_t H, uint8_t C );
 void setFlags_for_Add_1Byte( uint8_t oldVal, uint8_t valToAdd );
+void setFlags_for_Add_2Byte(  uint16_t oldVal, uint16_t valToAdd );
 uint8_t setFlags_for_Adc_1Byte( uint8_t oldVal, uint8_t valToAdd );
 void setFlags_for_Sub_1Byte( uint8_t oldVal, uint8_t valToSub );
 uint8_t setFlags_for_Sbc_1Byte( uint8_t oldVal, uint8_t valToSub );
