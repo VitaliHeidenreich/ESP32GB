@@ -29,11 +29,14 @@
 
 // LY Coordinates and Compare
 #define LY_LINE                 (prog->memory[0xFF44])
-#define LY_COMP                  (prog->memory[0xFF45])
+#define LY_COMP                 (prog->memory[0xFF45])
 
 // LCD Position and Scrolling
 #define SCY                     (prog->memory[0xFF42])
 #define SCX                     (prog->memory[0xFF43])
+
+#define WIN_POS_X               (prog->memory[0xFF4B]-7)
+#define WIN_POS_Y               (prog->memory[0xFF4A])
 
 
 // #############################################################################################################
@@ -44,7 +47,7 @@ void RenderBackground( )
     uint16_t tileData = 0;
     uint16_t backgroundMemory = 0;
     uint8_t  signedLocation = 0;
-    //uint8_t  usingWindow = 0;
+    uint8_t  usingWindow = 0;
     uint16_t xPosStart, yPosStart, tileAddr;
 
     uint8_t apix, bpix;
@@ -52,7 +55,17 @@ void RenderBackground( )
     // Pruefen ob Hintergrung aktiviert ist
     if( LCD_BG_ENA )  // BIT 0
     {
-        // Window is not implemented for now !!!
+        // Erweiterung für Fenster
+        if ( LCD_WINDOWENA ) // F
+		{ // F
+			if (WIN_POS_Y <= SCY) // F
+				usingWindow = 1 ; // F
+		} // F
+		else // F
+		{ // F
+			usingWindow = 0 ; // F
+		} // F
+
 
         // which tile data we are using?
 		if ( LCD_BG_DATASELECTION ) // BIT 4
@@ -66,21 +79,40 @@ void RenderBackground( )
 			signedLocation = 1 ;
 		}
 
+
 		// which tile map we are using?
-        if ( LCD_BG_MAPSELECTION )  // BIT 6
-            backgroundMemory = 0x9C00 ;
-        else
-            backgroundMemory = 0x9800 ;
+		if( usingWindow ) // F
+        { // F
+            if ( LCD_TILEMAPSELECT ) // F
+				backgroundMemory = 0x9C00 ; // F
+			else // F
+				backgroundMemory = 0x9800 ; // F
+        } // F
+        else // F
+        {
+            if ( LCD_BG_MAPSELECTION )  // BIT 3
+                backgroundMemory = 0x9C00 ;
+            else
+                backgroundMemory = 0x9800 ;
+        }
+
 
         // Herausfuinden welche Tile Nummer durch die Verschiebung der Y-koordinate
         //    ohne der Verschiebung der X-Koordinate  als Start verwendet werden soll.
-        yPosStart = (uint8_t)((SCY+LY_LINE)/8) * 32;
+        if( usingWindow )
+            yPosStart = (uint8_t)((LY_LINE-WIN_POS_Y)/8) * 32;
+        else
+            yPosStart = (uint8_t)((SCY+LY_LINE)/8) * 32;
 
         for( uint8_t pixel = 0; pixel < 160; pixel ++ )
         {
-            // Herausfuinden welche Tile Nummer durch die Verschiebung der X-koordinate
+            // Herausfinden welche Tile Nummer durch die Verschiebung der X-koordinate
             //    ohne der Verschiebung der Y-Koordinate als Start verwendet werden soll.
-            xPosStart = (pixel + SCX)/8;
+            if( usingWindow && (pixel >= WIN_POS_X))  // F
+                xPosStart = pixel - WIN_POS_X;  // F
+            else  // F
+                xPosStart = (pixel + SCX);
+            xPosStart /= 8;
 
             // Ablage der Daten herausfinden
             if( signedLocation )

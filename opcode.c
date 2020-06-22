@@ -69,23 +69,6 @@ const unsigned char InstructionTicks_0xCB[256] = {
 };
 
 
-/*Wait for a key press*/
-uint8_t status_key_press( uint8_t* pressed_key )
-{
-    uint8_t iRet = 0;
-
-    for( int i = 0; i < 0xf; i ++ )
-    {
-        if( prog->keys[ i ] )
-        {
-            iRet = 1;
-            *pressed_key = i;
-        }
-    }
-    return iRet;
-}
-
-
 void check_interrupts(  )
 {
   // Interrupts
@@ -1606,6 +1589,13 @@ void gb_opcode_exec( )
         INCREMENT( 3 );
         break;
 
+    case 0xEE:
+        // XOR A,u8
+        setFlags_for_Xor_1Byte( REG_A, get_1byteData() );
+        REG_A = REG_A ^ get_1byteData();
+        INCREMENT(1);
+        break;
+
     case 0xEF:
         // RST 28h !!!
         INCREMENT( 1 );
@@ -1703,6 +1693,7 @@ void gb_opcode_exec( )
     default:
         printf("Funktion nicht unterstuetzt: 0x%02X @ addr.:%d\n",prog->opcode,PC);
         while(1){}
+        INCREMENT( 1 );
         break;
     }
 

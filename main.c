@@ -14,7 +14,7 @@
 #define FPS_Rate 60
 
 // it is just an example how to use roms
-char* filename = "../games/DrMario.gb";
+char* filename = "../games/Tetris.gb";
 SDL_Event ev;
 
 int main(int argc, char** argv)
@@ -82,7 +82,7 @@ int main(int argc, char** argv)
                     break;
                 case SDL_KEYUP: // Refresh also on KeyUp
                 case SDL_KEYDOWN:
-                    read_keys( ev );
+                    prog->keys = read_keys( ev );
                     break;
                 default:
                     break;

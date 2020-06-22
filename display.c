@@ -65,13 +65,11 @@ void display_close( display* disp )
 uint8_t read_keys( SDL_Event ev )
 {
     uint8_t button_codes[ ] = {
-            SDL_SCANCODE_1, SDL_SCANCODE_2, SDL_SCANCODE_3, SDL_SCANCODE_4, // 1 2 3 4
-            SDL_SCANCODE_Q, SDL_SCANCODE_W, SDL_SCANCODE_E, SDL_SCANCODE_R, // q w e r
-            SDL_SCANCODE_A, SDL_SCANCODE_S, SDL_SCANCODE_D, SDL_SCANCODE_F, // a s d f
-            SDL_SCANCODE_Y, SDL_SCANCODE_X, SDL_SCANCODE_C, SDL_SCANCODE_V  // z x c v
+            SDL_SCANCODE_A, SDL_SCANCODE_W, SDL_SCANCODE_D, SDL_SCANCODE_S, // A W D S
+            SDL_SCANCODE_G, SDL_SCANCODE_H, SDL_SCANCODE_J, SDL_SCANCODE_K, // G H J K
     };
 
-    uint8_t iRet = 0;
+    uint16_t iRet = 0;
 
     for( int i = 0; i < sizeof(button_codes) / sizeof(uint8_t); i++ )
     {
@@ -83,7 +81,6 @@ uint8_t read_keys( SDL_Event ev )
             }
         }
     }
-
     return iRet;
 }
 
@@ -93,7 +90,7 @@ void convert_keys(gameboy* prog, uint8_t key_byte )
     // do something
 }
 
-uint16_t GBC_colors[ 4 ] = {0,70,140,200};
+uint16_t GBC_colors[ 4 ] = {10,70,140,200};
 
 // Ausgabe an die Anzeige
 void gb_ShowScreen( )

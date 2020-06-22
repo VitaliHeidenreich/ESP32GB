@@ -94,6 +94,7 @@ gameboy* gb_start( )
     // Interrupts
     p->IR_req = 0;
     p->memory[0xFF0F] = 0x00 ;
+    p->memory[0xFFFF] |= (1<<4);
     p->memory[0xFFFF] = 0x00 ;
 
     return p;
@@ -150,6 +151,7 @@ void gb_program_cycle( )
         LCD_control( prog->tikz );
         gb_interrupts( );
     }
+    // Displayausgabe -> muss beim ESP32 ersetzt werden
     gb_ShowScreen();
 }
 
@@ -190,60 +192,114 @@ void gb_update_timer( uint16_t cycles )
 **************************************************************************************/
 void gb_interrupts( )
 {
-    // Only if the Interrupt Master Enable Flag is set
-    if( IME )
+    static uint16_t programCounterBeforeIR = 0;
+    static uint8_t  waitForFinishActIR = 0;
+
+    // Einlesen der Tasten, aber noch kein Schreiben auf 0xFF00
+    gb_keys();
+
+    // Pruefen ob bereits ein Interrupt ausgeführt wird, falls ja dann warte bis
+    //    Ausfuehrung beendet worden ist. Dazu wird auf den Steck gelegten PC vor der
+    //    Interruptausfuehrung gelegten Wert gewartet.
+    if( waitForFinishActIR && (programCounterBeforeIR == PC) )
+            waitForFinishActIR = 0;
+
+    // Nur wenn Interrupt Master Enable Flag gesetzt ist
+    if( IME ) // && !waitForFinishActIR
     {
         // highest priority (0) have to be executed first if requested
         // First V-Blank interrupt because of the highest priority
-        if( V_BLANK_IR_ENABLED )
+        if( V_BLANK_IR_ENABLED && V_BLANK_IR_SET )
         {
-            if( V_BLANK_IR_SET )
-            {
-                // Disable both IME and the IR Request
-                IME = 0;
-                prog->memory[0xFF0F] &= ~(1 << 0);
-                prog->halt = 0;
-                // Trigger INT 40h
-                push_to_stack( PC );
-                PC = 0x40;
-                // Nächter push soll unterbunden werden!
-                //prog->IR_req = 1;
-            }
+            programCounterBeforeIR = safePcAndUnsetIr( 0 );
+            waitForFinishActIR = 1;
+            // Trigger INT 40h
+            PC = 0x40;
         }
 
-        if( LCD_STAT_IR_ENABLED )
+        else if( LCD_STAT_IR_ENABLED && LCD_STAT_IR_SET )
         {
-            if( LCD_STAT_IR_SET )
-            {
-
-            }
+            programCounterBeforeIR = safePcAndUnsetIr( 2 );
+            waitForFinishActIR = 1;
+            // Trigger INT 40h
+            PC = 0x48;
         }
 
-        if( TIMER_IR_ENABLED )
+        else if( TIMER_IR_ENABLED && TIMER_IR_SET )
         {
-            if( TIMER_IR_SET )
-            {
-
-            }
+            programCounterBeforeIR = safePcAndUnsetIr( 2 );
+            waitForFinishActIR = 1;
+            // Trigger INT 40h
+            PC = 0x50;
         }
 
-        if( SERIAL_IR_ENABLED )
+        else if( SERIAL_IR_ENABLED && SERIAL_IR_SET )
         {
-            if( SERIAL_IR_SET )
-            {
-
-            }
+            // TBD
         }
 
-        if( JOYPAD_IR_ENABLED )
+        else if( JOYPAD_IR_ENABLED && JOYPAD_IR_SET )
         {
-            if( JOYPAD_IR_SET )
-            {
-
-            }
+            programCounterBeforeIR = safePcAndUnsetIr( 4 );
+            waitForFinishActIR = 1;
+            // Trigger INT 60h
+            PC = 0x60;
+        }
+        else
+        {
+            // nop
         }
     }
 }
+
+// SubR fuer die IR Registersteuerung; Sperren der IRs und retten des PCs
+uint16_t safePcAndUnsetIr(uint8_t IrNum)
+{
+    // Disable both IME and the IR Request
+    IME = 0; // Nicht sicher !!!
+    prog->memory[0xFF0F] &= ~(1 << IrNum);
+    prog->halt = 0;
+    push_to_stack( PC );
+    return PC;
+}
+
+void gb_keys()
+{
+    static uint16_t lastState = 0;
+    if( prog->keys != lastState )
+    {
+        prog->memory[0xFF0F] = (1<<4);
+        //JOYPAD_IR_SET
+        lastState = prog->keys;
+        //printf("Button 0x%02X pressed.\n", prog->keys);
+    }
+    else
+    {
+        // nop
+    }
+}
+// Umwaldeln der Tasten in gb format
+//  Bit 7 - Not used
+//  Bit 6 - Not used
+//  Bit 5 - P15 Select Button Keys      (0=Select)
+//  Bit 4 - P14 Select Direction Keys   (0=Select)
+//  Bit 3 - P13 Input Down  or Start    (0=Pressed) (Read Only)
+//  Bit 2 - P12 Input Up    or Select   (0=Pressed) (Read Only)
+//  Bit 1 - P11 Input Left  or Button B (0=Pressed) (Read Only)
+//  Bit 0 - P10 Input Right or Button A (0=Pressed) (Read Only)
+uint8_t getGbButtonState( uint8_t iVal )
+{
+    uint8_t iRet = 0;
+    // Wenn Pfeiltasten angefordert werden:
+    if( ~iVal & ( 1 < 4 ) )
+        iRet = ((   ~prog->keys  ) & 0x0F) | 0b11100000;
+    // Wenn Funktionstasten angefragt werden:
+    else
+        iRet = (( ~prog->keys>>4 ) & 0x0F) | 0b11010000;
+
+    return iRet;
+}
+
 
 // ####################################################################################
 // Hilfsfunktionen des Gameboys
@@ -256,14 +312,17 @@ uint8_t get_1byteData(  )
 }
 uint8_t get_1byteDataFromAddr(  uint16_t addr )
 {
-    // Read Buttons TBD -> 0 pressed, 1 released
     if( addr == 0xFF00 )
-        return ( prog->memory[ addr ] | 0xCF );
-    // return whats in memory :-)
+    {
+        // FF00 enthaelt die Infos ueber die Tasten -> dabei ist 0 gedrueckt
+        return getGbButtonState( prog->memory[0xFF00] );
+    }
     else
+    {
+        // return whats in memory :-)
         return ( prog->memory[ addr ] );
+    }
 }
-
 // ####################################################################################
 // Schreibe 1 Byte auf den RAM
 void write_1byteData( uint16_t addr, uint8_t data )
@@ -615,7 +674,7 @@ void setFlags_for_And_1Byte(  uint8_t one, uint8_t two )
 void setFlags_for_Xor_1Byte(  uint8_t one, uint8_t two )
 {
     // Zero flag
-    if( ((one ^ two)& 0xff) == 0x0 )
+    if( ((one ^ two)& 0xff) == 0x00 )
         setFlags( 1, 0, 0, 0 );
     else
         setFlags( 0, 0, 0, 0 );

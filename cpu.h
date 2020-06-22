@@ -115,7 +115,7 @@ struct gameboy_t{
     // Hauptspeicher
     uint8_t  memory[MEM_SIZE];
     // Tasten --> Input 6 Buttons
-    uint8_t  keys[NUM_KEYS];
+    uint16_t  keys;
     // Struktur der Register AF BC DE HL
     registers reg;
     // Interrupt Master Enable Flag (Write Only)
@@ -166,6 +166,9 @@ void        gb_exec_prefix( );
 // ####################################################################################
 void setInterrupt(uint8_t ISR);
 void resetInterrupt(uint8_t ISR);
+void gb_keys( );
+uint8_t getGbButtonState( uint8_t iVal );
+uint16_t safePcAndUnsetIr(uint8_t IrNum);
 // ####################################################################################
 // Hilfsfunktionen des Gameboys
 uint16_t get_2byteData(  );
