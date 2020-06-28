@@ -43,7 +43,7 @@ void display_open(display *disp, uint8_t width, uint8_t height)
             }
             else
             {
-                SDL_SetRenderDrawColor( disp->renderer, 0,0,0,255);
+                SDL_SetRenderDrawColor( disp->renderer, 255,255,255,255);
                 SDL_RenderClear( disp->renderer );
                 printf("Renderer erfolgreich angelegt!\n");
             }
@@ -77,17 +77,12 @@ uint8_t read_keys( SDL_Event ev )
         {
             if(ev.type == SDL_KEYDOWN)
             {
-                iRet = iRet | ( 1 << i );
+                iRet |= ( 1 << i );
             }
         }
     }
+    iRet = ~iRet;
     return iRet;
-}
-
-// Anpasten der gelesenen Tasten an das Gameboy Layout
-void convert_keys(gameboy* prog, uint8_t key_byte )
-{
-    // do something
 }
 
 uint16_t GBC_colors[ 4 ] = {10,70,140,200};

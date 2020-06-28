@@ -39,9 +39,9 @@
 #define WIN_POS_Y               (prog->memory[0xFF4A])
 
 
-// #############################################################################################################
-// #############################################################################################################
-// #############################################################################################################
+/****************************************************************************************************************
+*  Render Hintergrund (statische Sachen)
+****************************************************************************************************************/
 void RenderBackground( )
 {
     uint16_t tileData = 0;
@@ -112,6 +112,7 @@ void RenderBackground( )
                 xPosStart = pixel - WIN_POS_X;  // F
             else  // F
                 xPosStart = (pixel + SCX);
+
             xPosStart /= 8;
 
             // Ablage der Daten herausfinden
@@ -129,16 +130,82 @@ void RenderBackground( )
 
             prog->ausgabeGrafik[ LY_LINE ][ pixel ] = ( ((apix >> (7-(SCX+pixel)%8))&0x1) ) | (((bpix >> (7-(SCX+pixel)%8))&0x1) << 1);
         }
-        // Debug
-//        for(uint8_t x; x < 160; x++)
-//            printf("%d",prog->ausgabeGrafik[ LY_LINE ][ x ]);
-//        printf("\n\n");
     }
 }
 
-// #############################################################################################################
-// #############################################################################################################
-// #############################################################################################################
+/****************************************************************************************************************
+*  Render Sprites (bewegte Sachen)
+****************************************************************************************************************/
+void RenderSprites()
+{
+    int8_t yPos, xPos;
+    uint8_t tLoc, attr, ysize;
+    uint8_t myPixelColor = 0;
+
+    // Sprites aktiviert?
+    if( LCD_OBJ_DISPENA )
+    {
+        //printf("Render Sprites\n");
+        for(uint8_t sprite = 0; sprite < 40; sprite ++)
+        {
+            // Einlesen der Eigenschaften
+            yPos = prog->memory[ 0xFE00 + sprite * 4 + 0 ] - 16;
+            xPos = prog->memory[ 0xFE00 + sprite * 4 + 1 ] -  8;
+            tLoc = prog->memory[ 0xFE00 + sprite * 4 + 2 ];
+            attr = prog->memory[ 0xFE00 + sprite * 4 + 3 ];
+
+            // Welche Spritegroeße wird verwendet?
+            if( LCD_OBJ_SIZE )
+                ysize = 16;
+            else
+                ysize =  8;
+
+            if(yPos >= 0)
+                printf("Durchlauf: %d >>> %d <= %d < 0%d\n",sprite,yPos,LY_LINE,yPos+ysize);
+
+            // Testen ob die Zeile betroffen ist, falls nein: "dont care!"
+            if (( LY_LINE >= yPos ) && ( LY_LINE < ( yPos + ysize )))
+            {
+                int line = LY_LINE - yPos ;
+
+// 				if ( attr & 0b01000000 )
+// 				{
+// 					line -= ysize ;
+// 					line *= -1 ;
+// 				}
+
+ 				line *= 2;
+
+ 				uint8_t apix = prog->memory[ 0x8000 + tLoc * 0xF + line + 0 ] ;
+ 				uint8_t bpix = prog->memory[ 0x8000 + tLoc * 0xF + line + 1 ] ;
+ 				printf("apix: 0x%02X and bpix: 0x%02X\n",apix,bpix);
+
+                for ( int tilePixel = 0; tilePixel <= 7; tilePixel++ )
+                {
+					// pruefen ob in x Richtung gespiegelt werden soll
+ 					if ( (attr & 0b00100000) )
+ 						myPixelColor = ( ((apix >>    tilePixel )&0x1) ) | (((bpix >>   tilePixel )&0x1) << 1);
+                    else
+                        myPixelColor = ( ((apix >> (7-tilePixel))&0x1) ) | (((bpix >> (7-tilePixel))&0x1) << 1);
+
+ 					// ist die Farbe transparent? Falls nein, dann schreibe Pixel
+                    if (!(myPixelColor == 0))
+                    {
+                        if( (LY_LINE <= 143) && (( xPos + tilePixel) <= 159) )
+                        {
+                            prog->ausgabeGrafik[ LY_LINE ][ tilePixel + xPos ] = myPixelColor;
+                            printf("VAL: 0x%02X\n",myPixelColor);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/****************************************************************************************************************
+*  Umschaltlogik zum Switchen zwischen den Modus fuer Displayausgabe
+****************************************************************************************************************/
 void LCD_control( uint32_t tikz )
 {
     static uint32_t lastTikz = 0;
@@ -164,8 +231,6 @@ void LCD_control( uint32_t tikz )
     // While >>> H-Blank --- 0 --- ##############################################
     if( (LCD_STATUS_MODE&0x03) == H_BLANK)
     {
-        debugStates( (LCD_STATUS_MODE&0x03), gpuInitTikz );
-
         // Check ticks
         if( gpuInitTikz <= 0 )
         {
@@ -192,8 +257,6 @@ void LCD_control( uint32_t tikz )
     // While >>> V-Blank --- 1 --- #################################################
     else if( (LCD_STATUS_MODE&0x03) == V_BLANK)
     {
-        debugStates( (LCD_STATUS_MODE&0x03), gpuInitTikz );
-
         if( LY_LINE == 144 )
             setInterrupt(0);
 
@@ -218,8 +281,6 @@ void LCD_control( uint32_t tikz )
     // While >>> OAM-RAM --- 2 --- ###################################################
     else if( (LCD_STATUS_MODE&0x03) == OAM_RAM)
     {
-        debugStates( (LCD_STATUS_MODE&0x03), gpuInitTikz );
-
         // Check ticks
         if( gpuInitTikz <= ( MAX_GPU_CYCLE_TIKZ - OAM_RAM_TIKZ ) ) // 456 - 80 = 376
         {
@@ -229,19 +290,19 @@ void LCD_control( uint32_t tikz )
     // While >>> TRANSPORT to LCD -- 3 --- ##########################################
     else if( (LCD_STATUS_MODE&0x03) == TRANSPORT)
     {
-        debugStates( (LCD_STATUS_MODE&0x03), gpuInitTikz );
-
         // Check ticks
         if( gpuInitTikz <= ( MAX_GPU_CYCLE_TIKZ - OAM_RAM_TIKZ - TRANSPORT_TIKZ ) ) // 456 - 80 - 172 = 204
         {
             // Eine Zeile Pixel in den Ausgabespeicher schreiben
             RenderBackground( );
+            RenderSprites();
             setMode( H_BLANK );
         }
     }
     else
     {
         printf("UNBESTIMMTER ZUSTAND IN DER AUSGABE. ERROR 404.\n");
+        while(1){}
     }
 }
 
@@ -258,29 +319,6 @@ void setMode( uint8_t mode )
 }
 
 // ----------------------------------------------------------------------------------------------------------------------
-// DEBUG ----------------------------------------------------------------------------------------------------------------
-// ----------------------------------------------------------------------------------------------------------------------
-void debugStates( uint8_t actState, uint32_t gpuTikz )
-{
-//    static uint8_t lastState = 7;
-//    static uint16_t lastTikz = 456;
-//
-//    if( actState != lastState )
-//    {
-//        printf("\nLCD-State: ");
-//        switch (actState)
-//        {
-//            case 0: printf("H-Blank   "); break;
-//            case 1: printf("V-Blank   ");break;
-//            case 2: printf("OAM_RAM   ");break;
-//            case 3: printf("TRANSPORT ");break;
-//            default: break;
-//        }
-//        printf("--- LY_LINE = %d und GPU-Tikz = %d (%d)\n", LY_LINE, gpuTikz, lastTikz - gpuTikz);
-//        lastState = actState;
-//        lastTikz = gpuTikz;
-//    }
-}
 
 
 

@@ -7,6 +7,7 @@
 void LCD_control( uint32_t tikz );
 //void getTile( uint16_t addr, uint16_t tileNum, gameboy *prog );
 void RenderBackground( );
+void RenderSprites();
 
 
 // Hilfsfunktionen

@@ -31,7 +31,6 @@ struct rgb {
 void display_open(display *disp, uint8_t width, uint8_t height);
 void display_close( display* disp );
 uint8_t read_keys( SDL_Event ev );
-void convert_keys(gameboy* prog, uint8_t key_byte );
 
 
 void gb_ShowScreen( );

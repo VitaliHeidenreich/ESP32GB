@@ -43,12 +43,14 @@ gameboy* gb_start( )
     p->reg.bc       = 0x0013;
     p->reg.de       = 0x00d8;
     p->reg.hl       = 0x014d;
-    //p->ticks        = 0x0000;
+    // p->ticks        = 0x0000;
     // Nur zum Spaß --> Gameboy Logo Zeigen
     p->bios_done    = 0;
+    // alle Tasten als nicht gedrueckt initialisieren
+    p->keys = 0xFF;
 
     // Buttons initialize to not pressed (high!)
-    p->memory[0xFF00] = 0b00111111;
+    p->memory[0xFF00] = 0b00001111;
 
     p->memory[0xFF10] = 0x80 ;
     p->memory[0xFF11] = 0xBF ;
@@ -94,8 +96,9 @@ gameboy* gb_start( )
     // Interrupts
     p->IR_req = 0;
     p->memory[0xFF0F] = 0x00 ;
-    p->memory[0xFFFF] |= (1<<4);
+
     p->memory[0xFFFF] = 0x00 ;
+    p->memory[0xFFFF] |= (1<<4);
 
     return p;
 }
@@ -144,20 +147,34 @@ void gb_program_cycle( )
     while( prog->tikz < MAX_TICKS )
     {
         gb_opcode_fetch( );
-        // HALT wird im Exec abgefangen
-        gb_opcode_exec( );
+        gb_opcode_exec( ); // HALT wird im Exec abgefangen
 
         gb_update_timer( prog->tikz );
         LCD_control( prog->tikz );
         gb_interrupts( );
     }
-    // Displayausgabe -> muss beim ESP32 ersetzt werden
+    // Displayausgabe
     gb_ShowScreen();
 }
 
-// ####################################################################################
-// ####################################################################################
-// ####################################################################################
+/**************************************************************************************
+*  Timer and Divider Registers
+*       FF04 - DIV - Divider Register (R/W) --> Incremented at rate of 16384Hz
+*       FF05 - TIMA - Timer counter (R/W) --> Incremented by a clock frequency specified
+*           by the TAC register ($FF07). When the value overflows (gets bigger than FFh)
+*           then it will be reset to the value specified in TMA (FF06), and an
+*           interrupt will be requested, as described below.
+*       FF06 - TMA - Timer Modulo (R/W) --> When the TIMA overflows, this data will be loaded.
+*       FF07 - TAC - Timer Control (R/W)
+*            Bit 2    - Timer Stop  (0=Stop, 1=Start)
+*            Bits 1-0 - Input Clock Select
+*                00:   4096 Hz    (~4194 Hz SGB)
+*                01: 262144 Hz  (~268400 Hz SGB)
+*                10:  65536 Hz   (~67110 Hz SGB)
+*                11:  16384 Hz   (~16780 Hz SGB)
+*       INT 50 - Timer Interrupt
+**************************************************************************************/
+// Nicht sicher ob es so passt!
 void gb_update_timer( uint16_t cycles )
 {
     // Do only if timer is started bit2 = 1
@@ -168,7 +185,7 @@ void gb_update_timer( uint16_t cycles )
         {
             TIMER_COUNTER_FF05 = TIMER_INIT_LOAD_FF06;
             // Set Timer interrupt INT 50
-            prog->memory[ 0xff0f ] = (1 << 2);
+            prog->memory[ 0xff0f ] |= (1 << 2);
         }
     }
 
@@ -181,7 +198,6 @@ void gb_update_timer( uint16_t cycles )
     }
 }
 
-// ####################################################################################
 /**************************************************************************************
 *  Interrupt handling function
 *     Bit 0: V-Blank  Interrupt Request (INT 40h)  (1=Request)
@@ -202,10 +218,12 @@ void gb_interrupts( )
     //    Ausfuehrung beendet worden ist. Dazu wird auf den Steck gelegten PC vor der
     //    Interruptausfuehrung gelegten Wert gewartet.
     if( waitForFinishActIR && (programCounterBeforeIR == PC) )
-            waitForFinishActIR = 0;
+    {
+        waitForFinishActIR = 0;
+    }
 
     // Nur wenn Interrupt Master Enable Flag gesetzt ist
-    if( IME ) // && !waitForFinishActIR
+    if( IME && !waitForFinishActIR ) //
     {
         // highest priority (0) have to be executed first if requested
         // First V-Blank interrupt because of the highest priority
@@ -219,7 +237,7 @@ void gb_interrupts( )
 
         else if( LCD_STAT_IR_ENABLED && LCD_STAT_IR_SET )
         {
-            programCounterBeforeIR = safePcAndUnsetIr( 2 );
+            programCounterBeforeIR = safePcAndUnsetIr( 1 );
             waitForFinishActIR = 1;
             // Trigger INT 40h
             PC = 0x48;
@@ -232,12 +250,12 @@ void gb_interrupts( )
             // Trigger INT 40h
             PC = 0x50;
         }
-
+        // Wird nicht unbedingt benötigt
         else if( SERIAL_IR_ENABLED && SERIAL_IR_SET )
         {
             // TBD
         }
-
+        // Fast niemaden interessiert diese Funktion :-) !!!
         else if( JOYPAD_IR_ENABLED && JOYPAD_IR_SET )
         {
             programCounterBeforeIR = safePcAndUnsetIr( 4 );
@@ -247,7 +265,7 @@ void gb_interrupts( )
         }
         else
         {
-            // nop
+            // nop: wenn nichts angefragt ist
         }
     }
 }
@@ -268,48 +286,55 @@ void gb_keys()
     static uint16_t lastState = 0;
     if( prog->keys != lastState )
     {
-        prog->memory[0xFF0F] = (1<<4);
         //JOYPAD_IR_SET
+        prog->memory[0xFF0F] |= (1<<4);
         lastState = prog->keys;
-        //printf("Button 0x%02X pressed.\n", prog->keys);
-    }
-    else
-    {
-        // nop
     }
 }
-// Umwaldeln der Tasten in gb format
-//  Bit 7 - Not used
-//  Bit 6 - Not used
-//  Bit 5 - P15 Select Button Keys      (0=Select)
-//  Bit 4 - P14 Select Direction Keys   (0=Select)
-//  Bit 3 - P13 Input Down  or Start    (0=Pressed) (Read Only)
-//  Bit 2 - P12 Input Up    or Select   (0=Pressed) (Read Only)
-//  Bit 1 - P11 Input Left  or Button B (0=Pressed) (Read Only)
-//  Bit 0 - P10 Input Right or Button A (0=Pressed) (Read Only)
+
+/************************************************************************************
+* Umwaldeln der Tasten in gb format
+*    Bit 7 - Not used
+*    Bit 6 - Not used
+*    Bit 5 - P15 Select Button Keys      (0=Select)
+*    Bit 4 - P14 Select Direction Keys   (0=Select)
+*    Bit 3 - P13 Input Down  or Start    (0=Pressed) (Read Only)
+*    Bit 2 - P12 Input Up    or Select   (0=Pressed) (Read Only)
+*    Bit 1 - P11 Input Left  or Button B (0=Pressed) (Read Only)
+*    Bit 0 - P10 Input Right or Button A (0=Pressed) (Read Only)
+************************************************************************************/
 uint8_t getGbButtonState( uint8_t iVal )
 {
     uint8_t iRet = 0;
     // Wenn Pfeiltasten angefordert werden:
-    if( ~iVal & ( 1 < 4 ) )
-        iRet = ((   ~prog->keys  ) & 0x0F) | 0b11100000;
+    if( iVal & ( 1 << 4 ) )
+        iRet = ((  prog->keys  ) & 0x0F) | 0b11010000;
     // Wenn Funktionstasten angefragt werden:
     else
-        iRet = (( ~prog->keys>>4 ) & 0x0F) | 0b11010000;
+        iRet = (( prog->keys >> 4 ) & 0x0F) | 0b11100000;
+
+    //printf("Bekommen: 0x%02X Gesendet: 0x%02X und Rohwert: 0x%02X \n",iVal,iRet,prog->keys);
 
     return iRet;
 }
 
 
-// ####################################################################################
-// Hilfsfunktionen des Gameboys
-
-// ####################################################################################
+/*************************************************************************************
+*   ##################################################################################
+*   ##################################################################################
+*
+*   Hilfsfunktionen des Gameboys
+*   Lesen und schreiben auf den Speicher uns sonstiges fuer die Op Abarbeitung
+*
+*   ##################################################################################
+*   ##################################################################################
+*************************************************************************************/
 // Lese 1 Byte direkt von der nächsten Stelle oder aus der Adresse
 uint8_t get_1byteData(  )
 {
     return ( prog->memory[ prog->pc + 1 ] );
 }
+
 uint8_t get_1byteDataFromAddr(  uint16_t addr )
 {
     if( addr == 0xFF00 )
@@ -323,28 +348,25 @@ uint8_t get_1byteDataFromAddr(  uint16_t addr )
         return ( prog->memory[ addr ] );
     }
 }
-// ####################################################################################
-// Schreibe 1 Byte auf den RAM
+
+/*************************************************************************************
+*   Schreibe ein Byte ins RAM, kein Schreiben auf das ROM erlauben
+*************************************************************************************/
 void write_1byteData( uint16_t addr, uint8_t data )
 {
     // Kein Schreiben auf das ROM erlaubt
     if ( (addr < 0x8000) || (( addr >= 0xFEA0 ) && ( addr < 0xFEFF)) )
     {
-        //printf("\nError 404: Schreiben auf Adresse: 0x%04X nicht zugelassen. (0x%02X at PC 0x%04X)", addr, prog->opcode, prog->pc);
+        // nop
     }
     // writing to ECHO ram also writes in RAM
     else if ( ( addr >= 0xE000 ) && (addr < 0xFE00) )
     {
-        prog->memory[addr] = data;
+        prog->memory[ addr ] = data;
         write_1byteData(addr-0x2000, data) ;
     }
-    else
-    {
-       prog->memory[addr] = data;
-    }
-
-    // Weitere Funktionen
-    if( addr == 0xFF07 )
+    // nicht sicher wie das funktioniert!!!
+    else if( addr == 0xFF07 )
     {
        // https://gbdev.gg8.se/wiki/articles/Timer_and_Divider_Registers
        switch( data & 0x03 )
@@ -363,16 +385,13 @@ void write_1byteData( uint16_t addr, uint8_t data )
     }
     else
     {
-//       if( (addr == 0xFFFF) || (addr == 0xFFFF) )
-//       {
-//           printf("\nInterrupt register will be written by 0x%02X\n",data);
-//           getchar();
-//       }
+       prog->memory[ addr ] = data;
     }
 }
 
-// ####################################################################################
-// Schreibe 2 Byte auf den RAM
+/*************************************************************************************
+*   Schreibe zwei Bytes ins RAM --> 2x Aufruf der Funktion: "write_1byteData"
+*************************************************************************************/
 void write_2byteData( uint16_t addr, uint16_t data )
 {
     write_1byteData( addr, data & 0xff);

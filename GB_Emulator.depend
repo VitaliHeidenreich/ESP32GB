@@ -442,12 +442,12 @@
 1590063445 c:\users\vitali\projekte\12_emulatoren\gameboy_gbc\bios.h
 	"cpu.h"
 
-1592741195 c:\users\vitali\projekte\12_emulatoren\gameboy_gbc\cpu.h
+1593104907 c:\users\vitali\projekte\12_emulatoren\gameboy_gbc\cpu.h
 	<stdint.h>
 	<stdlib.h>
 	<stdio.h>
 
-1592859844 source:c:\users\vitali\projekte\12_emulatoren\gameboy_gbc\cpu.c
+1593265320 source:c:\users\vitali\projekte\12_emulatoren\gameboy_gbc\cpu.c
 	<stdint.h>
 	<stdarg.h>
 	<stdlib.h>
@@ -457,7 +457,7 @@
 	"bios.h"
 	"lcd.h"
 
-1591131649 c:\users\vitali\projekte\12_emulatoren\gameboy_gbc\display.h
+1593113380 c:\users\vitali\projekte\12_emulatoren\gameboy_gbc\display.h
 	<stdint.h>
 	<SDL2/SDL.h>
 	"cpu.h"
@@ -465,21 +465,21 @@
 
 1590701656 c:\users\vitali\projekte\12_emulatoren\gameboy_gbc\main.h
 
-1591541334 c:\users\vitali\projekte\12_emulatoren\gameboy_gbc\lcd.h
+1593027537 c:\users\vitali\projekte\12_emulatoren\gameboy_gbc\lcd.h
 	"lcd.h"
 
-1592776330 source:c:\users\vitali\projekte\12_emulatoren\gameboy_gbc\display.c
+1593113380 source:c:\users\vitali\projekte\12_emulatoren\gameboy_gbc\display.c
 	<SDL2/SDL.h>
 	"display.h"
 	<stdlib.h>
 	<stdio.h>
 
-1592684538 source:c:\users\vitali\projekte\12_emulatoren\gameboy_gbc\lcd.c
+1593343212 source:c:\users\vitali\projekte\12_emulatoren\gameboy_gbc\lcd.c
 	"cpu.h"
 	"lcd.h"
 	<stdio.h>
 
-1592812361 source:c:\users\vitali\projekte\12_emulatoren\gameboy_gbc\main.c
+1593203275 source:c:\users\vitali\projekte\12_emulatoren\gameboy_gbc\main.c
 	<stdio.h>
 	<stdlib.h>
 	<unistd.h>
