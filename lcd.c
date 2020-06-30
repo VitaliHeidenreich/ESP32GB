@@ -139,46 +139,48 @@ void RenderBackground( )
 void RenderSprites()
 {
     int8_t yPos, xPos;
-    uint8_t tLoc, attr, ysize;
+    uint8_t tLoc, attr, ySize;
     uint8_t myPixelColor = 0;
+
+    uint8_t spriteLine, apix, bpix;
+
+    static uint16_t staticDebuger = 0;
+    staticDebuger ++;
+
+    if(staticDebuger >= 2000)
+    {
+        staticDebuger = 0;
+        //printf("Inhalt FE00 ff: 0x%04X  0x%04X  0x%04X  0x%04X \n", get_1byteDataFromAddr(0xFE00), get_1byteDataFromAddr(0xFE01), get_1byteDataFromAddr(0xFE02), get_1byteDataFromAddr(0xFE03));
+    }
 
     // Sprites aktiviert?
     if( LCD_OBJ_DISPENA )
     {
-        //printf("Render Sprites\n");
         for(uint8_t sprite = 0; sprite < 40; sprite ++)
         {
+            // Welche Spritegroeße wird verwendet?
+            if( LCD_OBJ_SIZE )
+            {
+                ySize = 16;
+            }
+            else
+            {
+                ySize =  8;
+            }
             // Einlesen der Eigenschaften
             yPos = prog->memory[ 0xFE00 + sprite * 4 + 0 ] - 16;
             xPos = prog->memory[ 0xFE00 + sprite * 4 + 1 ] -  8;
             tLoc = prog->memory[ 0xFE00 + sprite * 4 + 2 ];
             attr = prog->memory[ 0xFE00 + sprite * 4 + 3 ];
 
-            // Welche Spritegroeße wird verwendet?
-            if( LCD_OBJ_SIZE )
-                ysize = 16;
-            else
-                ysize =  8;
-
-            if(yPos >= 0)
-                printf("Durchlauf: %d >>> %d <= %d < 0%d\n",sprite,yPos,LY_LINE,yPos+ysize);
-
             // Testen ob die Zeile betroffen ist, falls nein: "dont care!"
-            if (( LY_LINE >= yPos ) && ( LY_LINE < ( yPos + ysize )))
+            if (( LY_LINE >= yPos ) && ( LY_LINE < ( yPos + ySize )))
             {
-                int line = LY_LINE - yPos ;
+                // Spiegelung in y-Richtung funktioniert aktiell nicht (nicht implementiert)
+                spriteLine = LY_LINE - yPos;
 
-// 				if ( attr & 0b01000000 )
-// 				{
-// 					line -= ysize ;
-// 					line *= -1 ;
-// 				}
-
- 				line *= 2;
-
- 				uint8_t apix = prog->memory[ 0x8000 + tLoc * 0xF + line + 0 ] ;
- 				uint8_t bpix = prog->memory[ 0x8000 + tLoc * 0xF + line + 1 ] ;
- 				printf("apix: 0x%02X and bpix: 0x%02X\n",apix,bpix);
+ 				apix = prog->memory[ 0x8000 + (tLoc << 4) + spriteLine*2 + 0 ] ;
+ 				bpix = prog->memory[ 0x8000 + (tLoc << 4) + spriteLine*2 + 1 ] ;
 
                 for ( int tilePixel = 0; tilePixel <= 7; tilePixel++ )
                 {
@@ -194,7 +196,6 @@ void RenderSprites()
                         if( (LY_LINE <= 143) && (( xPos + tilePixel) <= 159) )
                         {
                             prog->ausgabeGrafik[ LY_LINE ][ tilePixel + xPos ] = myPixelColor;
-                            printf("VAL: 0x%02X\n",myPixelColor);
                         }
                     }
                 }
@@ -209,8 +210,10 @@ void RenderSprites()
 void LCD_control( uint32_t tikz )
 {
     static uint32_t lastTikz = 0;
-    static uint32_t gpuInitTikz = MAX_GPU_CYCLE_TIKZ;
+    static int gpuInitTikz = MAX_GPU_CYCLE_TIKZ;  // uint32_t ???
     uint32_t vergangeneTikz;
+    // Erweiterung
+    static uint8_t H_BLANK_ONCE = 0;
 
     // lastTikz reseten wenn neuer Wert kleiner alter Wert
     if( lastTikz > tikz )
@@ -231,6 +234,13 @@ void LCD_control( uint32_t tikz )
     // While >>> H-Blank --- 0 --- ##############################################
     if( (LCD_STATUS_MODE&0x03) == H_BLANK)
     {
+        // Nicht sicher!!!
+        if(!H_BLANK_ONCE)
+        {
+            H_BLANK_ONCE = 1;
+            setInterrupt(1);
+        }
+
         // Check ticks
         if( gpuInitTikz <= 0 )
         {
@@ -238,19 +248,19 @@ void LCD_control( uint32_t tikz )
 
             if( LY_LINE > 143 )
             {
-                // Alle Zeilen zum Buffer "transportiert"
-                // V-Blank  Interrupt Request setzen --> triggern der Ausgabe
-                if( prog->IME & ( LCD_STATUS_MODE & (1<<4)) )
-                    prog->memory[0xFF0F] |= 0x01;
-
+                // Eintritt in den V-Blank --> alle Zeilen 1x durchgegangen
                 setMode( V_BLANK );
                 gpuInitTikz = V_BLANK_TIKZ/10; // 4560/10 tikz für V-Blank erwartet ( /10 weil 10x V-Blanks )
+
+                H_BLANK_ONCE = 0;
             }
             else
             {
                 // Noch nicht alle Zeilen "transportiert"
                 gpuInitTikz = MAX_GPU_CYCLE_TIKZ; // 456 für einen neuen OAM-Transport-H_Blank Zyklus
                 setMode( OAM_RAM );
+
+                H_BLANK_ONCE = 0;
             }
         }
     }
@@ -306,19 +316,17 @@ void LCD_control( uint32_t tikz )
     }
 }
 
-// #############################################################################################################
-// #############################################################################################################
-// #############################################################################################################
-// ----------------------------------------------------------------------------------------------------------------------
-// Hilfsfunktionen ------------------------------------------------------------------------------------------------------
-// ----------------------------------------------------------------------------------------------------------------------
+// #######################################################################################################################
+/// ----------------------------------------------------------------------------------------------------------------------
+/// Hilfsfunktionen ------------------------------------------------------------------------------------------------------
+/// ----------------------------------------------------------------------------------------------------------------------
 void setMode( uint8_t mode )
 {
     LCD_STATUS_MODE &= 0xFC;
     LCD_STATUS_MODE |= mode;
 }
 
-// ----------------------------------------------------------------------------------------------------------------------
+/// ENDE -----------------------------------------------------------------------------------------------------------------
 
 
 

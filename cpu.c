@@ -50,7 +50,7 @@ gameboy* gb_start( )
     p->keys = 0xFF;
 
     // Buttons initialize to not pressed (high!)
-    p->memory[0xFF00] = 0b00001111;
+    p->memory[0xFF00] = 0b11111111;
 
     p->memory[0xFF10] = 0x80 ;
     p->memory[0xFF11] = 0xBF ;
@@ -85,6 +85,7 @@ gameboy* gb_start( )
 
     // Timer
     p->deviderVariable = 0x00;
+    p->timerEnabled    = 0x00;
     p->memory[0xFF05]  = 0x00;
     p->memory[0xFF06]  = 0x00;
     p->memory[0xFF07]  = 0x00;
@@ -174,18 +175,28 @@ void gb_program_cycle( )
 *                11:  16384 Hz   (~16780 Hz SGB)
 *       INT 50 - Timer Interrupt
 **************************************************************************************/
-// Nicht sicher ob es so passt!
+// Nicht sicher ob es so passt!!!!!!!
 void gb_update_timer( uint16_t cycles )
 {
+    static uint16_t incrementerTimer = 0;
+
     // Do only if timer is started bit2 = 1
     if ( TIMER_CONTROL_REGISTER_FF07 & 0x04 )
     {
-        TIMER_COUNTER_FF05 += cycles;
-        if( TIMER_COUNTER_FF05 > 0xFF )
+        incrementerTimer += cycles;
+        // Umrechnen der Taktfrequenz zum Inkrementieren des Timers
+        if( incrementerTimer >= prog->clockSpeedCycles )
         {
-            TIMER_COUNTER_FF05 = TIMER_INIT_LOAD_FF06;
-            // Set Timer interrupt INT 50
-            prog->memory[ 0xff0f ] |= (1 << 2);
+            incrementerTimer = 0;
+            TIMER_COUNTER_FF05 ++;
+
+            // Wenn Timer den wert FFh erreicht hat dann reset und ISR
+            if( TIMER_COUNTER_FF05 == 0xFF )
+            {
+                TIMER_COUNTER_FF05 = TIMER_INIT_LOAD_FF06;
+                // Set Timer interrupt INT 50
+                prog->memory[ 0xff0f ] |= (1 << 2);
+            }
         }
     }
 
@@ -276,6 +287,7 @@ uint16_t safePcAndUnsetIr(uint8_t IrNum)
     // Disable both IME and the IR Request
     IME = 0; // Nicht sicher !!!
     prog->memory[0xFF0F] &= ~(1 << IrNum);
+    // Delete halt opm
     prog->halt = 0;
     push_to_stack( PC );
     return PC;
@@ -359,13 +371,6 @@ void write_1byteData( uint16_t addr, uint8_t data )
     {
         // nop
     }
-    // writing to ECHO ram also writes in RAM
-    else if ( ( addr >= 0xE000 ) && (addr < 0xFE00) )
-    {
-        prog->memory[ addr ] = data;
-        write_1byteData(addr-0x2000, data) ;
-    }
-    // nicht sicher wie das funktioniert!!!
     else if( addr == 0xFF07 )
     {
        // https://gbdev.gg8.se/wiki/articles/Timer_and_Divider_Registers
@@ -377,15 +382,48 @@ void write_1byteData( uint16_t addr, uint8_t data )
             case 3: prog->clockSpeedCycles = CPU_SPEED_GAMEBOY/16384; break ;//256
             default: break ;
         }
+        prog->memory[ 0xFF07 ] = data;
+        // Bit 2: 0 = Stop and 1 = Start timer
+        if( data & 0x04 )
+            prog->timerEnabled = 1;
+        else
+            prog->timerEnabled = 0;
+    }
+    // DMA Transfer
+    else if( addr == 0xFF46 )
+    {
+        addr = data * 0x100;
+        for( uint16_t i=0; i <= 0x009F; i++ )
+        {
+            prog->memory[0xFE00 + i] = prog->memory[addr + i];
+        }
+        // printf("FE00 ff: 0x%02X 0x%02X 0x%02X 0x%02X \n", prog->memory[0xFE00], prog->memory[0xFE01], prog->memory[0xFE02], prog->memory[0xFE03]);
+        // for(uint8_t s = 0; s < 16; s+=2)
+        //     printf("a: 0x%02X b: 0x%02X\n", prog->memory[0x8000 + 0x580 + s], prog->memory[0x8000 + 0x580 + s +1]);
+        // printf("\n\n");
     }
     // Writing any value to register 0xff04 resets it to 0x00
     else if( addr == 0xFF04 )
     {
         prog->memory[ 0xFF04 ] = 0x00;
     }
+    // writing to ECHO ram also writes in RAM
+    else if ( ( addr >= 0xE000 ) && (addr < 0xFE00) )
+    {
+        prog->memory[ addr ] = data;
+        write_1byteData(addr-0x2000, data) ;
+    }
+    // sonst schreibe auf den RAM
     else
     {
        prog->memory[ addr ] = data;
+    }
+
+
+    // Debugger!!!
+    if( (addr >=  0xFE00) && (addr <=  0xFE9F) )
+    {
+        //printf("OAM Schreibzugriff: Wert 0x%02X @ 0x%04X\n", data,addr);
     }
 }
 
