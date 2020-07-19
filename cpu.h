@@ -17,10 +17,14 @@
 #define ZERO_PAGE_RAM (FFFF-FF80)
 
 
-#define TILES_NUM 360
+#define     TILES_NUM       360
 
-#define CHARSET_START 0x050
-#define CHARSET_END   0x0A0
+#define     CHARSET_START   0x050
+#define     CHARSET_END     0x0A0
+
+/// Lets debug!
+#define DEBUG_OPM   1
+#define DEBUG_STEP  1
 
 /*************************************************************
 * simplify register handling
@@ -46,17 +50,12 @@
 #define     REG_HL  (prog->reg.hl)
 
 
-#define PC (prog->pc)
-#define SP (prog->sp)
+#define     PC      (prog->pc)
+#define     SP      (prog->sp)
 ///***********************************************************
 
-
-#define NUM_REGS      16
-#define NUM_KEYS      6         // 6 Tasten am GB
-
-#define DEBUG         0
-
-#define MAX_TICKS     69905
+#define     DEBUG         0
+#define     MAX_TICKS     70224//69905
 
 struct registers_t {
 	struct {
@@ -163,8 +162,6 @@ void        gb_exec_prefix( );
 // ####################################################################################
 void setInterrupt(uint8_t ISR);
 void resetInterrupt(uint8_t ISR);
-void gb_keys( );
-uint8_t getGbButtonState( uint8_t iVal );
 uint16_t safePcAndUnsetIr(uint8_t IrNum);
 // ####################################################################################
 // Hilfsfunktionen des Gameboys
@@ -240,5 +237,7 @@ void RLA_Test( );
 // Delete and set bit
 void SET_fnx(uint8_t bit, uint8_t *val);
 void RES(uint8_t bit, uint8_t *val);
+
+void printBinary(uint8_t val);
 
 #endif

@@ -24,9 +24,6 @@
 #define SET         1
 #define UNSET       0
 
-// Lets debug!
-#define DEBUG_OPM   0
-#define DEBUG_STEP  0
 
 // Zyklen
 const unsigned char InstructionTicks[256] = {
@@ -94,1608 +91,1609 @@ void gb_opcode_exec( )
     // Warten auf Event (Eingabe, Interrupt)
     if( prog->halt )
     {
-        //printf("0x10! Programm gestoppt, Eingabe erforderlich!\n");
-        return;
+        // printf("Halt aktiv.\n");
     }
-
-    // CPU Anweisungen
-    switch( prog->opcode )
+    else
     {
-    case 0x00:
-        // nop
-        INCREMENT( 1 );
-        break;
-
-    case 0x01:
-        // LD BC,u16
-        REG_BC = get_2byteData(  );
-        INCREMENT( 3 );
-        break;
-
-    case 0x02:
-        // LD (BC),A
-        write_1byteData( REG_BC, REG_A );
-        INCREMENT( 1 );
-        break;
-
-    case 0x03:
-        // INC BC
-        REG_BC ++;
-        INCREMENT( 1 );
-        break;
-    case 0x04:
-        // INC B
-        setFlags_for_Inc_1Byte( REG_B );
-        REG_B ++;
-        INCREMENT( 1 );
-        break;
-
-    case 0x05:
-        // DEC B
-        setFlags_for_Dec_1Byte( REG_B );
-        REG_B --;
-        INCREMENT( 1 );
-        break;
-
-    case 0x06:
-        // LD B,u8
-        REG_B = get_1byteData(  );
-        INCREMENT( 2 );
-        break;
-
-    case 0x07:
-        // RLCA
-        RLCA(&REG_A );
-        INCREMENT( 1 );
-        break;
-
-    case 0x08:
-        // LD (u16),SP
-        write_2byteData( get_2byteData( ), SP );
-        INCREMENT( 3 );
-        break;
-
-    case 0x09:
-        // ADD HL,BC
-        setFlags_for_Add_2Byte( REG_HL, REG_BC );
-        REG_HL = REG_HL + REG_BC;
-        INCREMENT( 1 );
-        break;
-
-    case 0x0A:
-        // LD A,(BC)
-        REG_A = get_1byteDataFromAddr( REG_BC );
-        INCREMENT( 1 );
-        break;
-
-    case 0x0B:
-        // DEC BC
-        REG_BC --;
-        INCREMENT( 1 );
-        break;
-
-    case 0x0C:
-        // INC C
-        setFlags_for_Inc_1Byte(  REG_C );
-        REG_C ++;
-        INCREMENT( 1 );
-        break;
-
-    case 0x0D:
-        //DEC C
-        setFlags_for_Dec_1Byte(  REG_C );
-        REG_C --;
-        INCREMENT( 1 );
-        break;
-
-    case 0x0E:
-        // LD C,u8
-        REG_C = get_1byteData(  );
-        INCREMENT( 2 );
-        break;
-
-    case 0x0F:
-        // RRCA
-        RRCA(&REG_A );
-        INCREMENT( 1 );
-        break;
-
-    case 0x10:
-        // STOP
-        prog->stop = 1;
-        INCREMENT( 2 );
-        break;
-
-    case 0x11:
-        // LD DE,u16
-        REG_DE = get_2byteData(  );
-        INCREMENT( 3 );
-        break;
-
-    case 0x12:
-        // LD (DE),A
-        write_1byteData( REG_DE, REG_A);
-        INCREMENT( 1 );
-        break;
-
-    case 0x13:
-        // INC DE
-        REG_DE ++;
-        INCREMENT( 1 );
-        break;
-
-    case 0x14:
-        // INC D
-        setFlags_for_Inc_1Byte( REG_D );
-        REG_D ++;
-        INCREMENT( 1 );
-        break;
-
-    case 0x15:
-        // DEC D
-        setFlags_for_Dec_1Byte(  REG_D );
-        REG_D --;
-        INCREMENT( 1 );
-        break;
-
-    case 0x16:
-        // LD D,u8
-        REG_D = get_1byteData(  );
-        INCREMENT( 2 );
-        break;
-
-    case 0x17:
-        // RLA
-        RLA(&REG_A );
-        INCREMENT( 1 );
-        break;
-
-    case 0x18:
-        // JR i8
-        mySignVal = get_1byteSignedData();
-        INCREMENT( 2 );
-        PC = PC + mySignVal;
-        break;
-
-    case 0x19:
-        // ADD HL,DE !!!
-        setFlags_for_Add_2Byte( REG_HL, REG_DE );
-        REG_HL = REG_HL + REG_DE;
-        INCREMENT( 1 );
-        break;
-
-    case 0x1A:
-        // LD A,(DE)
-        REG_A = get_1byteDataFromAddr( REG_DE );
-        INCREMENT( 1 );
-        break;
-
-    case 0x1B:
-        // DEC DE
-        REG_DE --;
-        INCREMENT( 1 );
-        break;
-
-    case 0x1C:
-        // INC E
-        setFlags_for_Inc_1Byte( REG_E );
-        REG_E ++;
-        INCREMENT( 1 );
-        break;
-
-    case 0x1D:
-        // DEC E
-        setFlags_for_Dec_1Byte( REG_E );
-        REG_E --;
-        INCREMENT( 1 );
-        break;
-
-    case 0x1E:
-        // LD E, u8
-        REG_E = get_1byteData( );
-        INCREMENT( 2 );
-        break;
-
-    case 0x1F: // OK
-        // RRA
-        RRA(&REG_A );
-        INCREMENT(1);
-        break;
-
-    case 0x20:
-        // JR NZ,i8 !!!
-        mySignVal = get_1byteSignedData();
-        INCREMENT( 2 );
-        if( !getZeroFlag( ) )
-            PC = PC + mySignVal;
-        break;
-
-    case 0x21:
-        // LD HL,u16
-        REG_HL = get_2byteData( );
-        INCREMENT( 3 );
-        break;
-
-    case 0x22: // !!!
-        // LD (HL+),A
-        write_1byteData( REG_HL, REG_A );
-        REG_HL ++;
-        INCREMENT( 1 );
-        break;
-
-    case 0x23:
-        // INC HL
-        REG_HL ++;
-        INCREMENT( 1 );
-        break;
-
-    case 0x24:
-        // INC H
-        setFlags_for_Inc_1Byte( REG_H );
-        REG_H ++;
-        INCREMENT( 1 );
-        break;
-
-    case 0x25:
-        // DEC H
-        setFlags_for_Dec_1Byte( REG_H );
-        REG_H --;
-        INCREMENT( 1 );
-        break;
-
-    case 0x26:
-        // LD H,u8
-        REG_H = get_1byteData(  );
-        INCREMENT( 2 );
-        break;
-
-    case 0x27:
-        // DAA !!!
-        do_DAA(  );
-        INCREMENT( 1 );
-        break;
-
-    case 0x28:
-        // JR Z,i8
-        mySignVal = get_1byteSignedData( );
-        INCREMENT( 2 );
-        if( getZeroFlag( ) )
-            PC = PC + mySignVal;
-        break;
-
-    case 0x29:
-        // ADD HL,HL
-        setFlags_for_Add_2Byte( REG_HL, REG_HL );
-        REG_HL = REG_HL + REG_HL;
-        INCREMENT( 1 );
-        break;
-
-    case 0x2A:
-        // LD A,(HL+)
-        REG_A = get_1byteDataFromAddr( REG_HL );
-        REG_HL++;
-        INCREMENT( 1 );
-        break;
-
-    case 0x2B:
-        // DEC HL
-        REG_HL --;
-        INCREMENT( 1 );
-        break;
-
-    case 0x2C:
-        // INC L
-        setFlags_for_Inc_1Byte( REG_L );
-        REG_L ++;
-        INCREMENT( 1 );
-        break;
-
-    case 0x2D:
-        // DEC L
-        setFlags_for_Dec_1Byte(  REG_L );
-        REG_L --;
-        INCREMENT( 1 );
-        break;
-
-    case 0x2E:
-        // LD L,u8
-        REG_L = get_1byteData(  );
-        INCREMENT( 2 );
-        break;
-
-    case 0x2F:
-        // CPL
-        REG_A=~REG_A;
-        setFlags(UNMOD,SET,SET,UNMOD );
-        INCREMENT( 1 );
-        break;
-
-    case 0x30:
-        // JR NC,i8
-        mySignVal = get_1byteSignedData();
-        INCREMENT( 2 );
-        if( !getCarryFlag( ) )
-            PC = PC + mySignVal;
-        break;
-
-    case 0x31:
-        // LD SP,u16
-        SP = get_2byteData(  );
-        INCREMENT( 3 );
-        break;
-
-    case 0x32:
-        // LD (HL-),A
-        write_1byteData( REG_HL, REG_A);
-        REG_HL--;
-        INCREMENT( 1 );
-        break;
-
-    case 0x33:
-        // INC HL
-        SP ++;
-        INCREMENT( 1 );
-        break;
-
-    case 0x34:
-        // INC H
-        setFlags_for_Inc_1Byte( prog->memory[ REG_HL ] );
-        prog->memory[ REG_HL ] ++;
-        INCREMENT( 1 );
-        break;
-
-    case 0x35:
-        // INC H
-        setFlags_for_Dec_1Byte( prog->memory[ REG_HL ] );
-        prog->memory[ REG_HL ] --;
-        INCREMENT( 1 );
-        break;
-
-    case 0x36:
-        // LD (HL),u8
-        write_1byteData(  REG_HL, get_1byteData(  ));
-        INCREMENT( 2 );
-        break;
-
-    case 0x37:
-        // SCF
-        setFlags(UNMOD,UNSET,UNSET,SET );
-        INCREMENT( 1 );
-        break;
-
-    case 0x38:
-        // JR C,i8 !!!
-        mySignVal = get_1byteSignedData();
-        INCREMENT( 2 );
-        if( getCarryFlag( ) )
-            PC = PC + mySignVal;
-        break;
-
-    case 0x39:
-        // ADD HL,SP
-        setFlags_for_Add_2Byte( REG_HL,SP);
-        REG_HL = REG_HL + prog->sp;
-        INCREMENT( 1 );
-        break;
-
-    case 0x3A:
-        // LD A,(HL-)
-        REG_A = get_1byteDataFromAddr( REG_HL );
-        REG_HL--;
-        INCREMENT( 1 );
-        break;
-
-    case 0x3B:
-        // DEC SP
-        SP --;
-        INCREMENT( 1 );
-        break;
-
-    case 0x3C:
-        // INC A
-        setFlags_for_Inc_1Byte( REG_A );
-        REG_A ++;
-        INCREMENT( 1 );
-        break;
-
-    case 0x3D:
-        // DEC A
-        setFlags_for_Dec_1Byte( REG_A );
-        REG_A --;
-        INCREMENT( 1 );
-        break;
-
-    case 0x3E:
-        // LD A,u8
-        REG_A = get_1byteData( );
-        INCREMENT( 2 );
-        break;
-
-    case 0x3F:
-        // CCF Flips the carry flag, and clears the N and H flags
-        setFlags( UNMOD, UNSET, UNSET, NOT );
-        INCREMENT( 1 );
-        break;
-
-    case 0x40:
-        // LD B,B
-        REG_B = REG_B;
-        INCREMENT( 1 );
-        break;
-
-    case 0x41:
-        // LD B,C
-        REG_B = REG_C;
-        INCREMENT( 1 );
-        break;
-
-    case 0x42:
-        // LD B,D
-        REG_B = REG_D;
-        INCREMENT( 1 );
-        break;
-
-    case 0x43:
-        // LD B,E
-        REG_B = REG_E;
-        INCREMENT( 1 );
-        break;
-
-    case 0x44:
-        // LD B,H
-        REG_B = REG_H;
-        INCREMENT( 1 );
-        break;
-
-    case 0x45:
-        // LD B,L
-        REG_B = REG_L;
-        INCREMENT( 1 );
-        break;
-
-    case 0x46:
-        // LD B,(HL)
-        REG_B = get_1byteDataFromAddr( REG_HL );
-        INCREMENT( 1 );
-        break;
-
-    case 0x47:
-        // LD B,Ap->memory
-        REG_B = REG_A;
-        INCREMENT( 1 );
-        break;
-
-    case 0x48:
-        // LD C,B
-        REG_C = REG_B;
-        INCREMENT( 1 );
-        break;
-
-    case 0x49:
-        // LD C,C
-        REG_C = REG_C;
-        INCREMENT( 1 );
-        break;
-
-    case 0x4A:
-        // LD C,D
-        REG_C = REG_D;
-        INCREMENT( 1 );
-        break;
-
-    case 0x4B:
-        // LD C,E
-        REG_C = REG_E;
-        INCREMENT( 1 );
-        break;
-
-    case 0x4C:
-        // LD C,H
-        REG_C = REG_H;
-        INCREMENT( 1 );
-        break;
-
-    case 0x4D:
-        // LD C,L
-        REG_C = REG_L;
-        INCREMENT( 1 );
-        break;
-
-    case 0x4E:
-        // LD C,(HL)
-        REG_C = get_1byteDataFromAddr( REG_HL );
-        INCREMENT( 1 );
-        break;
-
-    case 0x4F:
-        // LD C,A
-        REG_C = REG_A;
-        INCREMENT( 1 );
-        break;
-
-    case 0x50:
-        // LD D,B
-        REG_D = REG_B;
-        INCREMENT( 1 );
-        break;
-
-    case 0x51:
-        // LD D,C
-        REG_D = REG_C;
-        INCREMENT( 1 );
-        break;
-
-    case 0x52:
-        // LD D,D
-        REG_D = REG_D;
-        INCREMENT( 1 );
-        break;
-
-    case 0x53:
-        // LD D,E
-        REG_D = REG_E;
-        INCREMENT( 1 );
-        break;
-
-    case 0x54:
-        // LD D,H
-        REG_D = REG_H;
-        INCREMENT( 1 );
-        break;
-
-    case 0x55:
-        // LD D,L
-        REG_D = REG_L;
-        INCREMENT( 1 );
-        break;
-
-    case 0x56:
-        // LD D,(HL)
-        REG_D = get_1byteDataFromAddr( REG_HL );
-        INCREMENT( 1 );
-        break;
-
-    case 0x57:
-        // LD D,A
-        REG_D = REG_A;
-        INCREMENT( 1 );
-        break;
-
-    case 0x58:
-        // LD E,B
-        REG_E = REG_B;
-        INCREMENT( 1 );
-        break;
-
-    case 0x59:
-        // LD E,C
-        REG_E = REG_C;
-        INCREMENT( 1 );
-        break;
-
-    case 0x5A:
-        // LD E,D
-        REG_E = REG_D;
-        INCREMENT( 1 );
-        break;
-
-    case 0x5B:
-        // LD E,E
-        REG_E = REG_E;
-        INCREMENT( 1 );
-        break;
-
-    case 0x5C:
-        // LD E,H
-        REG_E = REG_H;
-        INCREMENT( 1 );
-        break;
-
-    case 0x5D:
-        // LD E,L
-        REG_E = REG_L;
-        INCREMENT( 1 );
-        break;
-
-    case 0x5E:
-        // LD E,(HL)
-        REG_E = get_1byteDataFromAddr( REG_HL );
-        INCREMENT( 1 );
-        break;
-
-    case 0x5F:
-        // LD E,A
-        REG_E = REG_A;
-        INCREMENT( 1 );
-        break;
-
-    case 0x60:
-        // LD H,B
-        REG_H = REG_B;
-        INCREMENT( 1 );
-        break;
-
-    case 0x61:
-        // LD H,C
-        REG_H = REG_C;
-        INCREMENT( 1 );
-        break;
-
-    case 0x62:
-        // LD H,D
-        REG_H = REG_D;
-        INCREMENT( 1 );
-        break;
-
-    case 0x63:
-        // LD H,E
-        REG_H = REG_E;
-        INCREMENT( 1 );
-        break;
-
-    case 0x64:
-        // LD H,H
-        REG_H = REG_H;
-        INCREMENT( 1 );
-        break;
-
-    case 0x65:
-        // LD H,L
-        REG_H = REG_L;
-        INCREMENT( 1 );
-        break;
-
-    case 0x66:
-        // LD H,(HL)
-        REG_H = get_1byteDataFromAddr( REG_HL );
-        INCREMENT( 1 );
-        break;
-
-    case 0x67:
-        // LD H,A
-        REG_H = REG_A;
-        INCREMENT( 1 );
-        break;
-
-    case 0x68:
-        // LD L,B
-        REG_L = REG_B;
-        INCREMENT( 1 );
-        break;
-
-    case 0x69:
-        // LD L,C
-        REG_L = REG_C;
-        INCREMENT( 1 );
-        break;
-
-    case 0x6A:
-        // LD L,D
-        REG_L = REG_D;
-        INCREMENT( 1 );
-        break;
-
-    case 0x6B:
-        // LD L,E
-        REG_L = REG_E;
-        INCREMENT( 1 );
-        break;
-
-    case 0x6C:
-        // LD L,H
-        REG_L = REG_H;
-        INCREMENT( 1 );
-        break;
-
-    case 0x6D:
-        // LD L,L
-        REG_L = REG_L;
-        INCREMENT( 1 );
-        break;
-
-    case 0x6E:
-        // LD L,(HL)
-        REG_L = get_1byteDataFromAddr( REG_HL );
-        INCREMENT( 1 );
-        break;
-
-    case 0x6F:
-        // LD L,A
-        REG_L = REG_A;
-        INCREMENT( 1 );
-        break;
-
-    case 0x70:
-        // LD (HL),B
-        write_1byteData( REG_HL, REG_B );
-        INCREMENT( 1 );
-        break;
-
-    case 0x71:
-        // LD (HL),C
-        write_1byteData(  REG_HL, REG_C );
-        INCREMENT( 1 );
-        break;
-
-    case 0x72:
-        // LD (HL),D
-        write_1byteData(  REG_HL, REG_D );
-        INCREMENT( 1 );
-        break;
-
-    case 0x73:
-        // LD (HL),E
-        write_1byteData(  REG_HL, REG_E );
-        INCREMENT( 1 );
-        break;
-
-    case 0x74:
-        // LD (HL),H
-        write_1byteData(  REG_HL, REG_H );
-        INCREMENT( 1 );
-        break;
-
-    case 0x75:
-        // LD (HL),L
-        write_1byteData(  REG_HL, REG_L );
-        INCREMENT( 1 );
-        break;
-
-    case 0x76:
-        // HALT !!!
-        prog->halt = 1;
-        //printf("\n ---------- HALT !!!! --------------- \n");
-        INCREMENT( 1 );
-        break;
-
-    case 0x77:
-        // LD (HL),A
-        write_1byteData( REG_HL, REG_A );
-        INCREMENT( 1 );
-        break;
-
-    case 0x78:
-        // LD A,B
-        REG_A = REG_B;
-        INCREMENT( 1 );
-        break;
-
-    case 0x79:
-        // LD A,C
-        REG_A = REG_C;
-        INCREMENT( 1 );
-        break;
-
-    case 0x7A:
-        // LD A,D
-        REG_A = REG_D;
-        INCREMENT( 1 );
-        break;
-
-    case 0x7B:
-        // LD A,E
-        REG_A = REG_E;
-        INCREMENT( 1 );
-        break;
-
-    case 0x7C:
-        // LD A,H
-        REG_A = REG_H;
-        INCREMENT( 1 );
-        break;
-
-    case 0x7D:
-        // LD A,L
-        REG_A = REG_L;
-        INCREMENT( 1 );
-        break;
-    case 0x7E:
-        // LD A,(HL)
-        REG_A = get_1byteDataFromAddr( REG_HL );
-        INCREMENT( 1 );
-        break;
-
-    case 0x7F:
-        // LD A,A
-        REG_A = REG_A;
-        INCREMENT( 1 );
-        break;
-
-    case 0x80:
-        // ADD A,B
-        setFlags_for_Add_1Byte( REG_A, REG_B );
-        REG_A = REG_A + REG_B;
-        INCREMENT( 1 );
-        break;
-
-    case 0x81:
-        // ADD A,C
-        setFlags_for_Add_1Byte(  REG_A, REG_C );
-        REG_A = REG_A + REG_C;
-        INCREMENT( 1 );
-        break;
-
-    case 0x82:
-        // ADD A,D
-        setFlags_for_Add_1Byte(  REG_A, REG_D );
-        REG_A = REG_A + REG_D;
-        INCREMENT( 1 );
-        break;
-
-    case 0x83:
-        // ADD A,E
-        setFlags_for_Add_1Byte(  REG_A, REG_E );
-        REG_A = REG_A + REG_E;
-        INCREMENT( 1 );
-        break;
-
-    case 0x84:
-        // ADD A,H
-        setFlags_for_Add_1Byte(  REG_A, REG_H );
-        REG_A = REG_A + REG_H;
-        INCREMENT( 1 );
-        break;
-
-    case 0x85:
-        // ADD A,L
-        setFlags_for_Add_1Byte(  REG_A, REG_L );
-        REG_A = REG_A + REG_L;
-        INCREMENT( 1 );
-        break;
-
-    case 0x86:
-        // ADD A,(HL)
-        setFlags_for_Add_1Byte(  REG_A, get_1byteDataFromAddr( REG_HL ) );
-        REG_A = REG_A + get_1byteDataFromAddr( REG_HL ) ;
-        INCREMENT( 1 );
-        break;
-
-    case 0x87:
-        // ADD A,A
-        setFlags_for_Add_1Byte( REG_A, REG_A );
-        REG_A = REG_A + REG_A;
-        INCREMENT( 1 );
-        break;
-
-    case 0x88:
-        // ADC A,B
-        REG_A = REG_A + setFlags_for_Adc_1Byte( REG_A, REG_B );
-        INCREMENT( 1 );
-        break;
-
-    case 0x89:
-        // ADD A,C
-        REG_A = REG_A + setFlags_for_Adc_1Byte( REG_A, REG_C );
-        INCREMENT( 1 );
-        break;
-
-    case 0x8A:
-        // ADD A,D
-        REG_A = REG_A + setFlags_for_Adc_1Byte(  REG_A, REG_D );
-        INCREMENT( 1 );
-        break;
-
-    case 0x8B:
-        // ADD A,E
-        REG_A = REG_A + setFlags_for_Adc_1Byte(  REG_A, REG_E );
-        INCREMENT( 1 );
-        break;
-
-    case 0x8C:
-        // ADD A,H
-        REG_A = REG_A + setFlags_for_Adc_1Byte(  REG_A, REG_H );
-        INCREMENT( 1 );
-        break;
-
-    case 0x8D:
-        // ADD A,L
-        REG_A = REG_A + setFlags_for_Adc_1Byte(  REG_A, REG_L );
-        INCREMENT( 1 );
-        break;
-
-    case 0x8E:
-        // ADD A,(HL)
-        REG_A = REG_A + setFlags_for_Adc_1Byte(  REG_A, get_1byteDataFromAddr(  REG_HL ) );
-        INCREMENT( 1 );
-        break;
-
-    case 0x8F:
-        // ADD A,A
-        REG_A = REG_A + setFlags_for_Adc_1Byte( REG_A, REG_A );
-        INCREMENT( 1 );
-        break;
-
-    case 0x90:
-        // SUB A,B
-        setFlags_for_Sub_1Byte(  REG_A, REG_B );
-        REG_A = REG_A - REG_B;
-        INCREMENT(1);
-        break;
-
-    case 0x91:
-        // SUB A,C
-        setFlags_for_Sub_1Byte(  REG_A, REG_C );
-        REG_A = REG_A - REG_C;
-        INCREMENT(1);
-        break;
-
-    case 0x92:
-        // SUB A,D
-        setFlags_for_Sub_1Byte(  REG_A, REG_D );
-        REG_A = REG_A - REG_D;
-        INCREMENT(1);
-        break;
-
-    case 0x93:
-        // SUB A,E
-        setFlags_for_Sub_1Byte(  REG_A, REG_E );
-        REG_A = REG_A - REG_E;
-        INCREMENT(1);
-        break;
-
-    case 0x94:
-        // SUB A,H
-        setFlags_for_Sub_1Byte(  REG_A, REG_H );
-        REG_A = REG_A - REG_H;
-        INCREMENT(1);
-        break;
-
-    case 0x95:
-        // SUB A,L
-        setFlags_for_Sub_1Byte(  REG_A, REG_L );
-        REG_A = REG_A - REG_L;
-        INCREMENT(1);
-        break;
-
-    case 0x96:
-        // SUB A,(HL)
-        setFlags_for_Sub_1Byte(  REG_A, get_1byteDataFromAddr(  REG_HL ) );
-        REG_A = REG_A - get_1byteDataFromAddr(  REG_HL );
-        INCREMENT(1);
-        break;
-
-    case 0x97:
-        // SUB A,A
-        setFlags_for_Sub_1Byte(  REG_A, REG_A );
-        REG_A = REG_A - REG_A;
-        INCREMENT(1);
-        break;
-
-    case 0x98:
-        // SBC A,B
-        REG_A = REG_A - setFlags_for_Sbc_1Byte(  REG_A, REG_B );
-        INCREMENT(1);
-        break;
-
-    case 0x99:
-        // SBC A,C
-        REG_A = REG_A - setFlags_for_Sbc_1Byte(  REG_A, REG_C );
-        INCREMENT(1);
-        break;
-
-    case 0x9A:
-        // SBC A,D
-        REG_A = REG_A - setFlags_for_Sbc_1Byte(  REG_A, REG_D );
-        INCREMENT(1);
-        break;
-
-    case 0x9B:
-        // SBC A,E
-        REG_A = REG_A - setFlags_for_Sbc_1Byte(  REG_A, REG_E );
-        INCREMENT(1);
-        break;
-
-    case 0x9C:
-        // SBC A,H
-        REG_A = REG_A - setFlags_for_Sbc_1Byte(  REG_A, REG_H );
-        INCREMENT(1);
-        break;
-
-    case 0x9D:
-        // SBC A,L
-        REG_A = REG_A - setFlags_for_Sbc_1Byte(  REG_A, REG_L );
-        INCREMENT(1);
-        break;
-
-    case 0x9E:
-        // SBC A,(HL)
-        REG_A = REG_A - setFlags_for_Sbc_1Byte(  REG_A, get_1byteDataFromAddr(  REG_HL ) );
-        INCREMENT(1);
-        break;
-
-    case 0x9F:
-        // SBC A,A
-        REG_A = REG_A - setFlags_for_Sbc_1Byte(  REG_A, REG_A );
-        INCREMENT(1);
-        break;
-
-    case 0xA0:
-        // AND A,B
-        setFlags_for_And_1Byte( REG_A, REG_B );
-        REG_A = REG_A & REG_B;
-        INCREMENT(1);
-        break;
-
-    case 0xA1:
-        // AND A,C
-        setFlags_for_And_1Byte(  REG_A, REG_C );
-        REG_A = REG_A & REG_C;
-        INCREMENT(1);
-        break;
-
-    case 0xA2:
-        // AND A,D
-        setFlags_for_And_1Byte(  REG_A, REG_D );
-        REG_A = REG_A & REG_D;
-        INCREMENT(1);
-        break;
-
-    case 0xA3:
-        // AND A,E
-        setFlags_for_And_1Byte(  REG_A, REG_E );
-        REG_A = REG_A & REG_E;
-        INCREMENT(1);
-        break;
-
-    case 0xA4:
-        // AND A,H
-        setFlags_for_And_1Byte( REG_A, REG_H );
-        REG_A = REG_A & REG_H;
-        INCREMENT(1);
-        break;
-
-    case 0xA5:
-        // AND A,L
-        setFlags_for_And_1Byte( REG_A, REG_L );
-        REG_A = REG_A & REG_L;
-        INCREMENT(1);
-        break;
-
-    case 0xA6:
-        // AND A,(HL)
-        setFlags_for_And_1Byte( REG_A, get_1byteDataFromAddr(  REG_HL ) );
-        REG_A = REG_A & get_1byteDataFromAddr(  REG_HL );
-        INCREMENT(1);
-        break;
-
-    case 0xA7:
-        // AND A,A
-        setFlags_for_And_1Byte( REG_A, REG_A );
-        REG_A = REG_A & REG_A;
-        INCREMENT(1);
-        break;
-
-    case 0xA8:
-        // XOR A,B
-        setFlags_for_Xor_1Byte( REG_A, REG_B );
-        REG_A = REG_A ^ REG_B;
-        INCREMENT(1);
-        break;
-
-    case 0xA9:
-        // XOR A,C
-        setFlags_for_Xor_1Byte(  REG_A, REG_C );
-        REG_A = REG_A ^ REG_C;
-        INCREMENT(1);
-        break;
-
-    case 0xAA:
-        // XOR A,D
-        setFlags_for_Xor_1Byte( REG_A, REG_D );
-        REG_A = REG_A ^ REG_D;
-        INCREMENT(1);
-        break;
-
-    case 0xAB:
-        // XOR A,E
-        setFlags_for_Xor_1Byte( REG_A, REG_E );
-        REG_A = REG_A ^ REG_E;
-        INCREMENT(1);
-        break;
-
-    case 0xAC:
-        // XOR A,H
-        setFlags_for_Xor_1Byte( REG_A, REG_H );
-        REG_A = REG_A ^ REG_H;
-        INCREMENT(1);
-        break;
-
-    case 0xAD:
-        // XOR A,L
-        setFlags_for_Xor_1Byte(  REG_A, REG_L );
-        REG_A = REG_A ^ REG_L;
-        INCREMENT(1);
-        break;
-
-    case 0xAE:
-        // XOR A,(HL)
-        setFlags_for_Xor_1Byte( REG_A, get_1byteDataFromAddr(  REG_HL ) );
-        REG_A = REG_A ^ get_1byteDataFromAddr(  REG_HL );
-        INCREMENT(1);
-        break;
-
-    case 0xAF:
-        // XOR A,A
-        setFlags_for_Xor_1Byte( REG_A, REG_A );
-        REG_A = REG_A ^ REG_A;
-        INCREMENT(1);
-        break;
-
-    case 0xB0:
-        // OR A,B
-        setFlags_for_Or_1Byte( REG_A, REG_B );
-        REG_A = REG_A | REG_B;
-        INCREMENT( 1 );
-        break;
-
-    case 0xB1:
-        // OR A,C
-        setFlags_for_Or_1Byte( REG_A, REG_C );
-        REG_A = REG_A | REG_C;
-        INCREMENT( 1 );
-        break;
-
-    case 0xB2:
-        // OR A,D
-        setFlags_for_Or_1Byte( REG_A, REG_D );
-        REG_A = REG_A | REG_D;
-        INCREMENT( 1 );
-        break;
-
-    case 0xB3:
-        // OR A,E
-        setFlags_for_Or_1Byte( REG_A, REG_E );
-        REG_A = REG_A | REG_E;
-        INCREMENT( 1 );
-        break;
-
-    case 0xB4:
-        // OR A,H
-        setFlags_for_Or_1Byte( REG_A, REG_H );
-        REG_A = REG_A | REG_H;
-        INCREMENT( 1 );
-        break;
-
-    case 0xB5:
-        // OR A,L
-        setFlags_for_Or_1Byte( REG_A, REG_L );
-        REG_A = REG_A | REG_L;
-        INCREMENT( 1 );
-        break;
-
-    case 0xB6:
-        // OR A,(HL)
-        setFlags_for_Or_1Byte(  REG_A, get_1byteDataFromAddr(  REG_HL ) );
-        REG_A = REG_A | get_1byteDataFromAddr( REG_HL );
-        INCREMENT( 1 );
-        break;
-
-    case 0xB7:
-        // OR A,A
-        setFlags_for_Or_1Byte( REG_A, REG_A );
-        REG_A = REG_A | REG_A;
-        INCREMENT( 1 );
-        break;
-
-    case 0xB8:
-        // CP A,B
-        setFlags_for_Sub_1Byte( REG_A, REG_B );
-        INCREMENT( 1 );
-        break;
-
-    case 0xB9:
-        // CP A,C
-        setFlags_for_Sub_1Byte( REG_A, REG_C );
-        INCREMENT( 1 );
-        break;
-    case 0xBA:
-
-        // CP A,D
-        setFlags_for_Sub_1Byte( REG_A, REG_D );
-        INCREMENT( 1 );
-        break;
-
-    case 0xBB:
-        // CP A,E
-        setFlags_for_Sub_1Byte( REG_A, REG_E );
-        INCREMENT( 1 );
-        break;
-
-    case 0xBC:
-        // CP A,H
-        setFlags_for_Sub_1Byte( REG_A, REG_H );
-        INCREMENT( 1 );
-        break;
-
-    case 0xBD:
-        // CP A,L
-        setFlags_for_Sub_1Byte( REG_A, REG_L );
-        INCREMENT( 1 );
-        break;
-
-    case 0xBE:
-        // CP A,(HL)
-        setFlags_for_Sub_1Byte(  REG_A, get_1byteDataFromAddr(  REG_HL ) );
-        INCREMENT( 1 );
-        break;
-
-    case 0xBF:
-        // CP A,A
-        setFlags_for_Sub_1Byte(  REG_A, REG_A );
-        INCREMENT( 1 );
-        break;
-
-    case 0xC0: // !!!
-        // RET NZ
-        INCREMENT( 1 );
-        if ( !getZeroFlag( ) )
-            PC = read_from_stack( );
-        break;
-
-    case 0xC1:
-        // POP BC
-        INCREMENT( 1 );
-        REG_BC = read_from_stack( );
-        break;
-
-    case 0xC2:
-        // JP NZ,u16
-        myVal = get_2byteData( );
-        INCREMENT( 3 );
-        if( !getZeroFlag( ) )
-            PC = myVal;
-        break;
-
-    case 0xC3: // !!!
-        // JP u16
-        myVal = get_2byteData( );
-        INCREMENT( 3 );
-        PC = myVal;
-        break;
-
-    case 0xC4:
-        // CALL NZ,u16
-        myVal = get_2byteData( );
-        INCREMENT( 3 );
-        if( !getZeroFlag( ) )
+        // CPU Anweisungen
+        switch( prog->opcode )
         {
+        case 0x00:
+            // nop
+            INCREMENT( 1 );
+            break;
+
+        case 0x01:
+            // LD BC,u16
+            REG_BC = get_2byteData(  );
+            INCREMENT( 3 );
+            break;
+
+        case 0x02:
+            // LD (BC),A
+            write_1byteData( REG_BC, REG_A );
+            INCREMENT( 1 );
+            break;
+
+        case 0x03:
+            // INC BC
+            REG_BC ++;
+            INCREMENT( 1 );
+            break;
+        case 0x04:
+            // INC B
+            setFlags_for_Inc_1Byte( REG_B );
+            REG_B ++;
+            INCREMENT( 1 );
+            break;
+
+        case 0x05:
+            // DEC B
+            setFlags_for_Dec_1Byte( REG_B );
+            REG_B --;
+            INCREMENT( 1 );
+            break;
+
+        case 0x06:
+            // LD B,u8
+            REG_B = get_1byteData(  );
+            INCREMENT( 2 );
+            break;
+
+        case 0x07:
+            // RLCA
+            RLCA(&REG_A );
+            INCREMENT( 1 );
+            break;
+
+        case 0x08:
+            // LD (u16),SP
+            write_2byteData( get_2byteData( ), SP );
+            INCREMENT( 3 );
+            break;
+
+        case 0x09:
+            // ADD HL,BC
+            setFlags_for_Add_2Byte( REG_HL, REG_BC );
+            REG_HL = REG_HL + REG_BC;
+            INCREMENT( 1 );
+            break;
+
+        case 0x0A:
+            // LD A,(BC)
+            REG_A = get_1byteDataFromAddr( REG_BC );
+            INCREMENT( 1 );
+            break;
+
+        case 0x0B:
+            // DEC BC
+            REG_BC --;
+            INCREMENT( 1 );
+            break;
+
+        case 0x0C:
+            // INC C
+            setFlags_for_Inc_1Byte(  REG_C );
+            REG_C ++;
+            INCREMENT( 1 );
+            break;
+
+        case 0x0D:
+            //DEC C
+            setFlags_for_Dec_1Byte(  REG_C );
+            REG_C --;
+            INCREMENT( 1 );
+            break;
+
+        case 0x0E:
+            // LD C,u8
+            REG_C = get_1byteData(  );
+            INCREMENT( 2 );
+            break;
+
+        case 0x0F:
+            // RRCA
+            RRCA(&REG_A );
+            INCREMENT( 1 );
+            break;
+
+        case 0x10:
+            // STOP
+            prog->stop = 1;
+            INCREMENT( 2 );
+            break;
+
+        case 0x11:
+            // LD DE,u16
+            REG_DE = get_2byteData(  );
+            INCREMENT( 3 );
+            break;
+
+        case 0x12:
+            // LD (DE),A
+            write_1byteData( REG_DE, REG_A);
+            INCREMENT( 1 );
+            break;
+
+        case 0x13:
+            // INC DE
+            REG_DE ++;
+            INCREMENT( 1 );
+            break;
+
+        case 0x14:
+            // INC D
+            setFlags_for_Inc_1Byte( REG_D );
+            REG_D ++;
+            INCREMENT( 1 );
+            break;
+
+        case 0x15:
+            // DEC D
+            setFlags_for_Dec_1Byte(  REG_D );
+            REG_D --;
+            INCREMENT( 1 );
+            break;
+
+        case 0x16:
+            // LD D,u8
+            REG_D = get_1byteData(  );
+            INCREMENT( 2 );
+            break;
+
+        case 0x17:
+            // RLA
+            RLA(&REG_A );
+            INCREMENT( 1 );
+            break;
+
+        case 0x18:
+            // JR i8
+            mySignVal = get_1byteSignedData();
+            INCREMENT( 2 );
+            PC = PC + mySignVal;
+            break;
+
+        case 0x19:
+            // ADD HL,DE !!!
+            setFlags_for_Add_2Byte( REG_HL, REG_DE );
+            REG_HL = REG_HL + REG_DE;
+            INCREMENT( 1 );
+            break;
+
+        case 0x1A:
+            // LD A,(DE)
+            REG_A = get_1byteDataFromAddr( REG_DE );
+            INCREMENT( 1 );
+            break;
+
+        case 0x1B:
+            // DEC DE
+            REG_DE --;
+            INCREMENT( 1 );
+            break;
+
+        case 0x1C:
+            // INC E
+            setFlags_for_Inc_1Byte( REG_E );
+            REG_E ++;
+            INCREMENT( 1 );
+            break;
+
+        case 0x1D:
+            // DEC E
+            setFlags_for_Dec_1Byte( REG_E );
+            REG_E --;
+            INCREMENT( 1 );
+            break;
+
+        case 0x1E:
+            // LD E, u8
+            REG_E = get_1byteData( );
+            INCREMENT( 2 );
+            break;
+
+        case 0x1F: // OK
+            // RRA
+            RRA(&REG_A );
+            INCREMENT(1);
+            break;
+
+        case 0x20:
+            // JR NZ,i8 !!!
+            mySignVal = get_1byteSignedData();
+            INCREMENT( 2 );
+            if( !getZeroFlag( ) )
+                PC = PC + mySignVal;
+            break;
+
+        case 0x21:
+            // LD HL,u16
+            REG_HL = get_2byteData( );
+            INCREMENT( 3 );
+            break;
+
+        case 0x22:
+            // LD (HL+),A
+            write_1byteData( REG_HL, REG_A );
+            REG_HL ++;
+            INCREMENT( 1 );
+            break;
+
+        case 0x23:
+            // INC HL
+            REG_HL ++;
+            INCREMENT( 1 );
+            break;
+
+        case 0x24:
+            // INC H
+            setFlags_for_Inc_1Byte( REG_H );
+            REG_H ++;
+            INCREMENT( 1 );
+            break;
+
+        case 0x25:
+            // DEC H
+            setFlags_for_Dec_1Byte( REG_H );
+            REG_H --;
+            INCREMENT( 1 );
+            break;
+
+        case 0x26:
+            // LD H,u8
+            REG_H = get_1byteData(  );
+            INCREMENT( 2 );
+            break;
+
+        case 0x27:
+            // DAA !!!
+            do_DAA(  );
+            INCREMENT( 1 );
+            break;
+
+        case 0x28:
+            // JR Z,i8
+            mySignVal = get_1byteSignedData( );
+            INCREMENT( 2 );
+            if( getZeroFlag( ) )
+                PC = PC + mySignVal;
+            break;
+
+        case 0x29:
+            // ADD HL,HL
+            setFlags_for_Add_2Byte( REG_HL, REG_HL );
+            REG_HL = REG_HL + REG_HL;
+            INCREMENT( 1 );
+            break;
+
+        case 0x2A:
+            // LD A,(HL+)
+            REG_A = get_1byteDataFromAddr( REG_HL );
+            REG_HL++;
+            INCREMENT( 1 );
+            break;
+
+        case 0x2B:
+            // DEC HL
+            REG_HL --;
+            INCREMENT( 1 );
+            break;
+
+        case 0x2C:
+            // INC L
+            setFlags_for_Inc_1Byte( REG_L );
+            REG_L ++;
+            INCREMENT( 1 );
+            break;
+
+        case 0x2D:
+            // DEC L
+            setFlags_for_Dec_1Byte(  REG_L );
+            REG_L --;
+            INCREMENT( 1 );
+            break;
+
+        case 0x2E:
+            // LD L,u8
+            REG_L = get_1byteData(  );
+            INCREMENT( 2 );
+            break;
+
+        case 0x2F:
+            // CPL
+            REG_A=~REG_A;
+            setFlags(UNMOD,SET,SET,UNMOD );
+            INCREMENT( 1 );
+            break;
+
+        case 0x30:
+            // JR NC,i8
+            mySignVal = get_1byteSignedData();
+            INCREMENT( 2 );
+            if( !getCarryFlag( ) )
+                PC = PC + mySignVal;
+            break;
+
+        case 0x31:
+            // LD SP,u16
+            SP = get_2byteData(  );
+            INCREMENT( 3 );
+            break;
+
+        case 0x32:
+            // LD (HL-),A
+            write_1byteData( REG_HL, REG_A);
+            REG_HL--;
+            INCREMENT( 1 );
+            break;
+
+        case 0x33:
+            // INC HL
+            SP ++;
+            INCREMENT( 1 );
+            break;
+
+        case 0x34:
+            // INC H
+            setFlags_for_Inc_1Byte( prog->memory[ REG_HL ] );
+            prog->memory[ REG_HL ] ++;
+            INCREMENT( 1 );
+            break;
+
+        case 0x35:
+            // INC H
+            setFlags_for_Dec_1Byte( prog->memory[ REG_HL ] );
+            prog->memory[ REG_HL ] --;
+            INCREMENT( 1 );
+            break;
+
+        case 0x36:
+            // LD (HL),u8
+            write_1byteData(  REG_HL, get_1byteData(  ));
+            INCREMENT( 2 );
+            break;
+
+        case 0x37:
+            // SCF
+            setFlags(UNMOD,UNSET,UNSET,SET );
+            INCREMENT( 1 );
+            break;
+
+        case 0x38:
+            // JR C,i8 !!!
+            mySignVal = get_1byteSignedData();
+            INCREMENT( 2 );
+            if( getCarryFlag( ) )
+                PC = PC + mySignVal;
+            break;
+
+        case 0x39:
+            // ADD HL,SP
+            setFlags_for_Add_2Byte( REG_HL,SP);
+            REG_HL = REG_HL + prog->sp;
+            INCREMENT( 1 );
+            break;
+
+        case 0x3A:
+            // LD A,(HL-)
+            REG_A = get_1byteDataFromAddr( REG_HL );
+            REG_HL--;
+            INCREMENT( 1 );
+            break;
+
+        case 0x3B:
+            // DEC SP
+            SP --;
+            INCREMENT( 1 );
+            break;
+
+        case 0x3C:
+            // INC A
+            setFlags_for_Inc_1Byte( REG_A );
+            REG_A ++;
+            INCREMENT( 1 );
+            break;
+
+        case 0x3D:
+            // DEC A
+            setFlags_for_Dec_1Byte( REG_A );
+            REG_A --;
+            INCREMENT( 1 );
+            break;
+
+        case 0x3E:
+            // LD A,u8
+            REG_A = get_1byteData( );
+            INCREMENT( 2 );
+            break;
+
+        case 0x3F:
+            // CCF Flips the carry flag, and clears the N and H flags
+            setFlags( UNMOD, UNSET, UNSET, NOT );
+            INCREMENT( 1 );
+            break;
+
+        case 0x40:
+            // LD B,B
+            REG_B = REG_B;
+            INCREMENT( 1 );
+            break;
+
+        case 0x41:
+            // LD B,C
+            REG_B = REG_C;
+            INCREMENT( 1 );
+            break;
+
+        case 0x42:
+            // LD B,D
+            REG_B = REG_D;
+            INCREMENT( 1 );
+            break;
+
+        case 0x43:
+            // LD B,E
+            REG_B = REG_E;
+            INCREMENT( 1 );
+            break;
+
+        case 0x44:
+            // LD B,H
+            REG_B = REG_H;
+            INCREMENT( 1 );
+            break;
+
+        case 0x45:
+            // LD B,L
+            REG_B = REG_L;
+            INCREMENT( 1 );
+            break;
+
+        case 0x46:
+            // LD B,(HL)
+            REG_B = get_1byteDataFromAddr( REG_HL );
+            INCREMENT( 1 );
+            break;
+
+        case 0x47:
+            // LD B,A
+            REG_B = REG_A;
+            INCREMENT( 1 );
+            break;
+
+        case 0x48:
+            // LD C,B
+            REG_C = REG_B;
+            INCREMENT( 1 );
+            break;
+
+        case 0x49:
+            // LD C,C
+            REG_C = REG_C;
+            INCREMENT( 1 );
+            break;
+
+        case 0x4A:
+            // LD C,D
+            REG_C = REG_D;
+            INCREMENT( 1 );
+            break;
+
+        case 0x4B:
+            // LD C,E
+            REG_C = REG_E;
+            INCREMENT( 1 );
+            break;
+
+        case 0x4C:
+            // LD C,H
+            REG_C = REG_H;
+            INCREMENT( 1 );
+            break;
+
+        case 0x4D:
+            // LD C,L
+            REG_C = REG_L;
+            INCREMENT( 1 );
+            break;
+
+        case 0x4E:
+            // LD C,(HL)
+            REG_C = get_1byteDataFromAddr( REG_HL );
+            INCREMENT( 1 );
+            break;
+
+        case 0x4F:
+            // LD C,A
+            REG_C = REG_A;
+            INCREMENT( 1 );
+            break;
+
+        case 0x50:
+            // LD D,B
+            REG_D = REG_B;
+            INCREMENT( 1 );
+            break;
+
+        case 0x51:
+            // LD D,C
+            REG_D = REG_C;
+            INCREMENT( 1 );
+            break;
+
+        case 0x52:
+            // LD D,D
+            REG_D = REG_D;
+            INCREMENT( 1 );
+            break;
+
+        case 0x53:
+            // LD D,E
+            REG_D = REG_E;
+            INCREMENT( 1 );
+            break;
+
+        case 0x54:
+            // LD D,H
+            REG_D = REG_H;
+            INCREMENT( 1 );
+            break;
+
+        case 0x55:
+            // LD D,L
+            REG_D = REG_L;
+            INCREMENT( 1 );
+            break;
+
+        case 0x56:
+            // LD D,(HL)
+            REG_D = get_1byteDataFromAddr( REG_HL );
+            INCREMENT( 1 );
+            break;
+
+        case 0x57:
+            // LD D,A
+            REG_D = REG_A;
+            INCREMENT( 1 );
+            break;
+
+        case 0x58:
+            // LD E,B
+            REG_E = REG_B;
+            INCREMENT( 1 );
+            break;
+
+        case 0x59:
+            // LD E,C
+            REG_E = REG_C;
+            INCREMENT( 1 );
+            break;
+
+        case 0x5A:
+            // LD E,D
+            REG_E = REG_D;
+            INCREMENT( 1 );
+            break;
+
+        case 0x5B:
+            // LD E,E
+            REG_E = REG_E;
+            INCREMENT( 1 );
+            break;
+
+        case 0x5C:
+            // LD E,H
+            REG_E = REG_H;
+            INCREMENT( 1 );
+            break;
+
+        case 0x5D:
+            // LD E,L
+            REG_E = REG_L;
+            INCREMENT( 1 );
+            break;
+
+        case 0x5E:
+            // LD E,(HL)
+            REG_E = get_1byteDataFromAddr( REG_HL );
+            INCREMENT( 1 );
+            break;
+
+        case 0x5F:
+            // LD E,A
+            REG_E = REG_A;
+            INCREMENT( 1 );
+            break;
+
+        case 0x60:
+            // LD H,B
+            REG_H = REG_B;
+            INCREMENT( 1 );
+            break;
+
+        case 0x61:
+            // LD H,C
+            REG_H = REG_C;
+            INCREMENT( 1 );
+            break;
+
+        case 0x62:
+            // LD H,D
+            REG_H = REG_D;
+            INCREMENT( 1 );
+            break;
+
+        case 0x63:
+            // LD H,E
+            REG_H = REG_E;
+            INCREMENT( 1 );
+            break;
+
+        case 0x64:
+            // LD H,H
+            REG_H = REG_H;
+            INCREMENT( 1 );
+            break;
+
+        case 0x65:
+            // LD H,L
+            REG_H = REG_L;
+            INCREMENT( 1 );
+            break;
+
+        case 0x66:
+            // LD H,(HL)
+            REG_H = get_1byteDataFromAddr( REG_HL );
+            INCREMENT( 1 );
+            break;
+
+        case 0x67:
+            // LD H,A
+            REG_H = REG_A;
+            INCREMENT( 1 );
+            break;
+
+        case 0x68:
+            // LD L,B
+            REG_L = REG_B;
+            INCREMENT( 1 );
+            break;
+
+        case 0x69:
+            // LD L,C
+            REG_L = REG_C;
+            INCREMENT( 1 );
+            break;
+
+        case 0x6A:
+            // LD L,D
+            REG_L = REG_D;
+            INCREMENT( 1 );
+            break;
+
+        case 0x6B:
+            // LD L,E
+            REG_L = REG_E;
+            INCREMENT( 1 );
+            break;
+
+        case 0x6C:
+            // LD L,H
+            REG_L = REG_H;
+            INCREMENT( 1 );
+            break;
+
+        case 0x6D:
+            // LD L,L
+            REG_L = REG_L;
+            INCREMENT( 1 );
+            break;
+
+        case 0x6E:
+            // LD L,(HL)
+            REG_L = get_1byteDataFromAddr( REG_HL );
+            INCREMENT( 1 );
+            break;
+
+        case 0x6F:
+            // LD L,A
+            REG_L = REG_A;
+            INCREMENT( 1 );
+            break;
+
+        case 0x70:
+            // LD (HL),B
+            write_1byteData( REG_HL, REG_B );
+            INCREMENT( 1 );
+            break;
+
+        case 0x71:
+            // LD (HL),C
+            write_1byteData(  REG_HL, REG_C );
+            INCREMENT( 1 );
+            break;
+
+        case 0x72:
+            // LD (HL),D
+            write_1byteData(  REG_HL, REG_D );
+            INCREMENT( 1 );
+            break;
+
+        case 0x73:
+            // LD (HL),E
+            write_1byteData(  REG_HL, REG_E );
+            INCREMENT( 1 );
+            break;
+
+        case 0x74:
+            // LD (HL),H
+            write_1byteData(  REG_HL, REG_H );
+            INCREMENT( 1 );
+            break;
+
+        case 0x75:
+            // LD (HL),L
+            write_1byteData(  REG_HL, REG_L );
+            INCREMENT( 1 );
+            break;
+
+        case 0x76:
+            // HALT !!!
+            prog->halt = 1;
+            INCREMENT( 1 );
+            break;
+
+        case 0x77:
+            // LD (HL),A
+            write_1byteData( REG_HL, REG_A );
+            INCREMENT( 1 );
+            break;
+
+        case 0x78:
+            // LD A,B
+            REG_A = REG_B;
+            INCREMENT( 1 );
+            break;
+
+        case 0x79:
+            // LD A,C
+            REG_A = REG_C;
+            INCREMENT( 1 );
+            break;
+
+        case 0x7A:
+            // LD A,D
+            REG_A = REG_D;
+            INCREMENT( 1 );
+            break;
+
+        case 0x7B:
+            // LD A,E
+            REG_A = REG_E;
+            INCREMENT( 1 );
+            break;
+
+        case 0x7C:
+            // LD A,H
+            REG_A = REG_H;
+            INCREMENT( 1 );
+            break;
+
+        case 0x7D:
+            // LD A,L
+            REG_A = REG_L;
+            INCREMENT( 1 );
+            break;
+        case 0x7E:
+            // LD A,(HL)
+            //printf("Get val for A from 0x%04X at PC: 0x%04X\n", REG_HL,PC);
+            REG_A = get_1byteDataFromAddr( REG_HL );
+            INCREMENT( 1 );
+            break;
+
+        case 0x7F:
+            // LD A,A
+            REG_A = REG_A;
+            INCREMENT( 1 );
+            break;
+
+        case 0x80:
+            // ADD A,B
+            setFlags_for_Add_1Byte( REG_A, REG_B );
+            REG_A = REG_A + REG_B;
+            INCREMENT( 1 );
+            break;
+
+        case 0x81:
+            // ADD A,C
+            setFlags_for_Add_1Byte(  REG_A, REG_C );
+            REG_A = REG_A + REG_C;
+            INCREMENT( 1 );
+            break;
+
+        case 0x82:
+            // ADD A,D
+            setFlags_for_Add_1Byte(  REG_A, REG_D );
+            REG_A = REG_A + REG_D;
+            INCREMENT( 1 );
+            break;
+
+        case 0x83:
+            // ADD A,E
+            setFlags_for_Add_1Byte(  REG_A, REG_E );
+            REG_A = REG_A + REG_E;
+            INCREMENT( 1 );
+            break;
+
+        case 0x84:
+            // ADD A,H
+            setFlags_for_Add_1Byte(  REG_A, REG_H );
+            REG_A = REG_A + REG_H;
+            INCREMENT( 1 );
+            break;
+
+        case 0x85:
+            // ADD A,L
+            setFlags_for_Add_1Byte(  REG_A, REG_L );
+            REG_A = REG_A + REG_L;
+            INCREMENT( 1 );
+            break;
+
+        case 0x86:
+            // ADD A,(HL)
+            setFlags_for_Add_1Byte(  REG_A, get_1byteDataFromAddr( REG_HL ) );
+            REG_A = REG_A + get_1byteDataFromAddr( REG_HL ) ;
+            INCREMENT( 1 );
+            break;
+
+        case 0x87:
+            // ADD A,A
+            setFlags_for_Add_1Byte( REG_A, REG_A );
+            REG_A = REG_A + REG_A;
+            INCREMENT( 1 );
+            break;
+
+        case 0x88:
+            // ADC A,B
+            REG_A = REG_A + setFlags_for_Adc_1Byte( REG_A, REG_B );
+            INCREMENT( 1 );
+            break;
+
+        case 0x89:
+            // ADD A,C
+            REG_A = REG_A + setFlags_for_Adc_1Byte( REG_A, REG_C );
+            INCREMENT( 1 );
+            break;
+
+        case 0x8A:
+            // ADD A,D
+            REG_A = REG_A + setFlags_for_Adc_1Byte(  REG_A, REG_D );
+            INCREMENT( 1 );
+            break;
+
+        case 0x8B:
+            // ADD A,E
+            REG_A = REG_A + setFlags_for_Adc_1Byte(  REG_A, REG_E );
+            INCREMENT( 1 );
+            break;
+
+        case 0x8C:
+            // ADD A,H
+            REG_A = REG_A + setFlags_for_Adc_1Byte(  REG_A, REG_H );
+            INCREMENT( 1 );
+            break;
+
+        case 0x8D:
+            // ADD A,L
+            REG_A = REG_A + setFlags_for_Adc_1Byte(  REG_A, REG_L );
+            INCREMENT( 1 );
+            break;
+
+        case 0x8E:
+            // ADD A,(HL)
+            REG_A = REG_A + setFlags_for_Adc_1Byte(  REG_A, get_1byteDataFromAddr(  REG_HL ) );
+            INCREMENT( 1 );
+            break;
+
+        case 0x8F:
+            // ADD A,A
+            REG_A = REG_A + setFlags_for_Adc_1Byte( REG_A, REG_A );
+            INCREMENT( 1 );
+            break;
+
+        case 0x90:
+            // SUB A,B
+            setFlags_for_Sub_1Byte(  REG_A, REG_B );
+            REG_A = REG_A - REG_B;
+            INCREMENT(1);
+            break;
+
+        case 0x91:
+            // SUB A,C
+            setFlags_for_Sub_1Byte(  REG_A, REG_C );
+            REG_A = REG_A - REG_C;
+            INCREMENT(1);
+            break;
+
+        case 0x92:
+            // SUB A,D
+            setFlags_for_Sub_1Byte(  REG_A, REG_D );
+            REG_A = REG_A - REG_D;
+            INCREMENT(1);
+            break;
+
+        case 0x93:
+            // SUB A,E
+            setFlags_for_Sub_1Byte(  REG_A, REG_E );
+            REG_A = REG_A - REG_E;
+            INCREMENT(1);
+            break;
+
+        case 0x94:
+            // SUB A,H
+            setFlags_for_Sub_1Byte(  REG_A, REG_H );
+            REG_A = REG_A - REG_H;
+            INCREMENT(1);
+            break;
+
+        case 0x95:
+            // SUB A,L
+            setFlags_for_Sub_1Byte(  REG_A, REG_L );
+            REG_A = REG_A - REG_L;
+            INCREMENT(1);
+            break;
+
+        case 0x96:
+            // SUB A,(HL)
+            setFlags_for_Sub_1Byte(  REG_A, get_1byteDataFromAddr(  REG_HL ) );
+            REG_A = REG_A - get_1byteDataFromAddr(  REG_HL );
+            INCREMENT(1);
+            break;
+
+        case 0x97:
+            // SUB A,A
+            setFlags_for_Sub_1Byte(  REG_A, REG_A );
+            REG_A = REG_A - REG_A;
+            INCREMENT(1);
+            break;
+
+        case 0x98:
+            // SBC A,B
+            REG_A = REG_A - setFlags_for_Sbc_1Byte(  REG_A, REG_B );
+            INCREMENT(1);
+            break;
+
+        case 0x99:
+            // SBC A,C
+            REG_A = REG_A - setFlags_for_Sbc_1Byte(  REG_A, REG_C );
+            INCREMENT(1);
+            break;
+
+        case 0x9A:
+            // SBC A,D
+            REG_A = REG_A - setFlags_for_Sbc_1Byte(  REG_A, REG_D );
+            INCREMENT(1);
+            break;
+
+        case 0x9B:
+            // SBC A,E
+            REG_A = REG_A - setFlags_for_Sbc_1Byte(  REG_A, REG_E );
+            INCREMENT(1);
+            break;
+
+        case 0x9C:
+            // SBC A,H
+            REG_A = REG_A - setFlags_for_Sbc_1Byte(  REG_A, REG_H );
+            INCREMENT(1);
+            break;
+
+        case 0x9D:
+            // SBC A,L
+            REG_A = REG_A - setFlags_for_Sbc_1Byte(  REG_A, REG_L );
+            INCREMENT(1);
+            break;
+
+        case 0x9E:
+            // SBC A,(HL)
+            REG_A = REG_A - setFlags_for_Sbc_1Byte(  REG_A, get_1byteDataFromAddr(  REG_HL ) );
+            INCREMENT(1);
+            break;
+
+        case 0x9F:
+            // SBC A,A
+            REG_A = REG_A - setFlags_for_Sbc_1Byte(  REG_A, REG_A );
+            INCREMENT(1);
+            break;
+
+        case 0xA0:
+            // AND A,B
+            setFlags_for_And_1Byte( REG_A, REG_B );
+            REG_A = REG_A & REG_B;
+            INCREMENT(1);
+            break;
+
+        case 0xA1:
+            // AND A,C
+            setFlags_for_And_1Byte(  REG_A, REG_C );
+            REG_A = REG_A & REG_C;
+            INCREMENT(1);
+            break;
+
+        case 0xA2:
+            // AND A,D
+            setFlags_for_And_1Byte(  REG_A, REG_D );
+            REG_A = REG_A & REG_D;
+            INCREMENT(1);
+            break;
+
+        case 0xA3:
+            // AND A,E
+            setFlags_for_And_1Byte(  REG_A, REG_E );
+            REG_A = REG_A & REG_E;
+            INCREMENT(1);
+            break;
+
+        case 0xA4:
+            // AND A,H
+            setFlags_for_And_1Byte( REG_A, REG_H );
+            REG_A = REG_A & REG_H;
+            INCREMENT(1);
+            break;
+
+        case 0xA5:
+            // AND A,L
+            setFlags_for_And_1Byte( REG_A, REG_L );
+            REG_A = REG_A & REG_L;
+            INCREMENT(1);
+            break;
+
+        case 0xA6:
+            // AND A,(HL)
+            setFlags_for_And_1Byte( REG_A, get_1byteDataFromAddr(  REG_HL ) );
+            REG_A = REG_A & get_1byteDataFromAddr(  REG_HL );
+            INCREMENT(1);
+            break;
+
+        case 0xA7:
+            // AND A,A
+            setFlags_for_And_1Byte( REG_A, REG_A );
+            REG_A = REG_A & REG_A;
+            INCREMENT(1);
+            break;
+
+        case 0xA8:
+            // XOR A,B
+            setFlags_for_Xor_1Byte( REG_A, REG_B );
+            REG_A = REG_A ^ REG_B;
+            INCREMENT(1);
+            break;
+
+        case 0xA9:
+            // XOR A,C
+            setFlags_for_Xor_1Byte(  REG_A, REG_C );
+            REG_A = REG_A ^ REG_C;
+            INCREMENT(1);
+            break;
+
+        case 0xAA:
+            // XOR A,D
+            setFlags_for_Xor_1Byte( REG_A, REG_D );
+            REG_A = REG_A ^ REG_D;
+            INCREMENT(1);
+            break;
+
+        case 0xAB:
+            // XOR A,E
+            setFlags_for_Xor_1Byte( REG_A, REG_E );
+            REG_A = REG_A ^ REG_E;
+            INCREMENT(1);
+            break;
+
+        case 0xAC:
+            // XOR A,H
+            setFlags_for_Xor_1Byte( REG_A, REG_H );
+            REG_A = REG_A ^ REG_H;
+            INCREMENT(1);
+            break;
+
+        case 0xAD:
+            // XOR A,L
+            setFlags_for_Xor_1Byte(  REG_A, REG_L );
+            REG_A = REG_A ^ REG_L;
+            INCREMENT(1);
+            break;
+
+        case 0xAE:
+            // XOR A,(HL)
+            setFlags_for_Xor_1Byte( REG_A, get_1byteDataFromAddr(  REG_HL ) );
+            REG_A = REG_A ^ get_1byteDataFromAddr(  REG_HL );
+            INCREMENT(1);
+            break;
+
+        case 0xAF:
+            // XOR A,A
+            setFlags_for_Xor_1Byte( REG_A, REG_A );
+            REG_A = REG_A ^ REG_A;
+            INCREMENT(1);
+            break;
+
+        case 0xB0:
+            // OR A,B
+            setFlags_for_Or_1Byte( REG_A, REG_B );
+            REG_A = REG_A | REG_B;
+            INCREMENT( 1 );
+            break;
+
+        case 0xB1:
+            // OR A,C
+            setFlags_for_Or_1Byte( REG_A, REG_C );
+            REG_A = REG_A | REG_C;
+            INCREMENT( 1 );
+            break;
+
+        case 0xB2:
+            // OR A,D
+            setFlags_for_Or_1Byte( REG_A, REG_D );
+            REG_A = REG_A | REG_D;
+            INCREMENT( 1 );
+            break;
+
+        case 0xB3:
+            // OR A,E
+            setFlags_for_Or_1Byte( REG_A, REG_E );
+            REG_A = REG_A | REG_E;
+            INCREMENT( 1 );
+            break;
+
+        case 0xB4:
+            // OR A,H
+            setFlags_for_Or_1Byte( REG_A, REG_H );
+            REG_A = REG_A | REG_H;
+            INCREMENT( 1 );
+            break;
+
+        case 0xB5:
+            // OR A,L
+            setFlags_for_Or_1Byte( REG_A, REG_L );
+            REG_A = REG_A | REG_L;
+            INCREMENT( 1 );
+            break;
+
+        case 0xB6:
+            // OR A,(HL)
+            setFlags_for_Or_1Byte(  REG_A, get_1byteDataFromAddr(  REG_HL ) );
+            REG_A = REG_A | get_1byteDataFromAddr( REG_HL );
+            INCREMENT( 1 );
+            break;
+
+        case 0xB7:
+            // OR A,A
+            setFlags_for_Or_1Byte( REG_A, REG_A );
+            REG_A = REG_A | REG_A;
+            INCREMENT( 1 );
+            break;
+
+        case 0xB8:
+            // CP A,B
+            setFlags_for_Sub_1Byte( REG_A, REG_B );
+            INCREMENT( 1 );
+            break;
+
+        case 0xB9:
+            // CP A,C
+            setFlags_for_Sub_1Byte( REG_A, REG_C );
+            INCREMENT( 1 );
+            break;
+        case 0xBA:
+
+            // CP A,D
+            setFlags_for_Sub_1Byte( REG_A, REG_D );
+            INCREMENT( 1 );
+            break;
+
+        case 0xBB:
+            // CP A,E
+            setFlags_for_Sub_1Byte( REG_A, REG_E );
+            INCREMENT( 1 );
+            break;
+
+        case 0xBC:
+            // CP A,H
+            setFlags_for_Sub_1Byte( REG_A, REG_H );
+            INCREMENT( 1 );
+            break;
+
+        case 0xBD:
+            // CP A,L
+            setFlags_for_Sub_1Byte( REG_A, REG_L );
+            INCREMENT( 1 );
+            break;
+
+        case 0xBE:
+            // CP A,(HL)
+            setFlags_for_Sub_1Byte(  REG_A, get_1byteDataFromAddr(  REG_HL ) );
+            INCREMENT( 1 );
+            break;
+
+        case 0xBF:
+            // CP A,A
+            setFlags_for_Sub_1Byte(  REG_A, REG_A );
+            INCREMENT( 1 );
+            break;
+
+        case 0xC0: // !!!
+            // RET NZ
+            INCREMENT( 1 );
+            if ( !getZeroFlag( ) )
+                PC = read_from_stack( );
+            break;
+
+        case 0xC1:
+            // POP BC
+            INCREMENT( 1 );
+            REG_BC = read_from_stack( );
+            break;
+
+        case 0xC2:
+            // JP NZ,u16
+            myVal = get_2byteData( );
+            INCREMENT( 3 );
+            if( !getZeroFlag( ) )
+                PC = myVal;
+            break;
+
+        case 0xC3: // !!!
+            // JP u16
+            myVal = get_2byteData( );
+            INCREMENT( 3 );
+            PC = myVal;
+            break;
+
+        case 0xC4:
+            // CALL NZ,u16
+            myVal = get_2byteData( );
+            INCREMENT( 3 );
+            if( !getZeroFlag( ) )
+            {
+                push_to_stack( PC );
+                PC = myVal;
+            }
+            break;
+
+        case 0xC5:
+            // PUSH BC
+            INCREMENT( 1 );
+            push_to_stack( REG_BC );
+            break;
+
+        case 0xC6:
+            // ADD A,u8
+            setFlags_for_Add_1Byte(  REG_A, get_1byteData(  ) );
+            REG_A = REG_A + get_1byteData(  );
+            INCREMENT( 2 );
+            break;
+
+    //    case 0xC7:
+    //        // RST 00h
+    //        INCREMENT( 1 );
+    //        push_to_stack( PC );
+    //        PC = 0x00;
+    //        break;
+
+        case 0xC8:
+            // RET NZ
+            INCREMENT( 1 );
+            if ( getZeroFlag( ) )
+                PC = read_from_stack( );
+            break;
+
+        case 0xC9:
+            // RET
+            myVal = read_from_stack( );
+            INCREMENT( 1 );
+            PC = myVal;
+            break;
+
+        case 0xCA:
+            // JP Z,u16
+            myVal = get_2byteData( );
+            INCREMENT( 3 );
+            if( getZeroFlag( ) )
+                PC = myVal;
+            break;
+
+        case 0xCB:
+            // PREFIX CB
+            INCREMENT( 1 );
+            prog->opcode = prog->memory[ PC ];
+            prog->tikz += InstructionTicks_0xCB[ prog->opcode ];
+            gb_exec_prefix( );
+            break;
+
+        case 0xCC:
+            // CALL Z,u16
+            myVal = get_2byteData(  );
+            INCREMENT( 3 );
+            if( getZeroFlag( ))
+                PC = myVal;
+            break;
+
+        case 0xCD: // CALL !!!
+            // CALL u16
+            myVal = get_2byteData( );
+            INCREMENT( 3 );
             push_to_stack( PC );
             PC = myVal;
-        }
-        break;
+            break;
 
-    case 0xC5:
-        // PUSH BC
-        INCREMENT( 1 );
-        push_to_stack( REG_BC );
-        break;
+        case 0xCF:
+            // RST 08h
+            INCREMENT( 1 );
+            push_to_stack( PC );
+            PC = 0x08;
+            break;
 
-    case 0xC6:
-        // ADD A,u8
-        setFlags_for_Add_1Byte(  REG_A, get_1byteData(  ) );
-        REG_A = REG_A + get_1byteData(  );
-        INCREMENT( 2 );
-        break;
+        case 0xD0:
+            // RET NC
+            INCREMENT( 1 );
+            if ( !getCarryFlag(  ) )
+                PC = read_from_stack(  );
+            break;
 
-//    case 0xC7:
-//        // RST 00h
-//        INCREMENT( 1 );
-//        push_to_stack( PC );
-//        PC = 0x00;
-//        break;
+        case 0xD1:
+            // POP DE
+            REG_DE = read_from_stack(  );
+            INCREMENT( 1 );
+            break;
 
-    case 0xC8:
-        // RET NZ
-        INCREMENT( 1 );
-        if ( getZeroFlag( ) )
+        case 0xD2:
+            // JP NC,u16
+            myVal = get_2byteData(  );
+            INCREMENT( 3 );
+            if( !getCarryFlag(  ) )
+                PC = myVal;
+            break;
+
+        case 0xD4:
+            // CALL NC,u16
+            myVal = get_2byteData(  );
+            INCREMENT( 3 );
+            if( !getCarryFlag(  ) ){
+                push_to_stack( PC );
+                PC = myVal;
+            }
+            break;
+
+        case 0xD5:
+            // PUSH DE
+            push_to_stack( REG_DE );
+            INCREMENT( 1 );
+            break;
+
+        case 0xD6:
+            // SUB A,u8
+            setFlags_for_Sub_1Byte(  REG_A, get_1byteData( ) );
+            REG_A = REG_A - get_1byteData( );
+            INCREMENT( 2 );
+            break;
+
+    //    case 0xD7:
+    //        // RST 10h
+    //        INCREMENT( 1 );
+    //        push_to_stack( PC );
+    //        PC = 0x10;
+    //        break;
+
+        case 0xD8:
+            // RET C
+            INCREMENT( 1 );
+            if ( getCarryFlag( ) )
+                PC = read_from_stack( );
+            break;
+
+        case 0xD9:
+            // RETI
             PC = read_from_stack( );
-        break;
+            prog->IME = 1;
+            break;
 
-    case 0xC9:
-        // RET
-        myVal = read_from_stack( );
-        INCREMENT( 1 );
-        PC = myVal;
-        break;
+        case 0xDA:
+            // JP C,u16
+            myVal = get_2byteData( );
+            INCREMENT( 3 );
+            if( getCarryFlag( ) )
+                PC = myVal;
+            break;
 
-    case 0xCA:
-        // JP Z,u16
-        myVal = get_2byteData( );
-        INCREMENT( 3 );
-        if( getZeroFlag( ) )
-            PC = myVal;
-        break;
+        case 0xDC:
+            // CALL C,u16
+            myVal = get_2byteData(  );
+            INCREMENT( 3 );
+            if( getCarryFlag( ) ){
+                push_to_stack( PC );
+                PC = myVal;
+            }
+            break;
 
-    case 0xCB:
-        // PREFIX CB
-        INCREMENT( 1 );
-        prog->opcode = prog->memory[ PC ];
-        prog->tikz += InstructionTicks_0xCB[ prog->opcode ];
-        gb_exec_prefix( );
-        break;
+        case 0xDE:
+            // SBC A,C
+            REG_A = REG_A - setFlags_for_Sbc_1Byte(  REG_A, get_1byteData() );
+            INCREMENT(1);
+            break;
 
-    case 0xCC:
-        // CALL Z,u16
-        myVal = get_2byteData(  );
-        INCREMENT( 3 );
-        if( getZeroFlag( ))
-            PC = myVal;
-        break;
-
-    case 0xCD: // CALL !!!
-        // CALL u16
-        myVal = get_2byteData( );
-        INCREMENT( 3 );
-        push_to_stack( PC );
-        PC = myVal;
-        break;
-
-    case 0xCF:
-        // RST 08h
-        INCREMENT( 1 );
-        push_to_stack( PC );
-        PC = 0x08;
-        break;
-
-    case 0xD0:
-        // RET NC
-        INCREMENT( 1 );
-        if ( !getCarryFlag(  ) )
-            PC = read_from_stack(  );
-        break;
-
-    case 0xD1:
-        // POP DE
-        REG_DE = read_from_stack(  );
-        INCREMENT( 1 );
-        break;
-
-    case 0xD2:
-        // JP NC,u16
-        myVal = get_2byteData(  );
-        INCREMENT( 3 );
-        if( !getCarryFlag(  ) )
-            PC = myVal;
-        break;
-
-    case 0xD4:
-        // CALL NC,u16
-        myVal = get_2byteData(  );
-        INCREMENT( 3 );
-        if( !getCarryFlag(  ) ){
+        case 0xDF:
+            // RST 38h
+            INCREMENT( 1 );
             push_to_stack( PC );
-            PC = myVal;
-        }
-        break;
+            prog->pc = 0x18;
+            break;
 
-    case 0xD5:
-        // PUSH DE
-        push_to_stack( REG_DE );
-        INCREMENT( 1 );
-        break;
+        case 0xE0:
+            // LD (FF00+u8),A
+            write_1byteData( (0xFF00 + get_1byteData( )), REG_A );
+            INCREMENT( 2 );
+            break;
 
-    case 0xD6:
-        // SUB A,u8
-        setFlags_for_Sub_1Byte(  REG_A, get_1byteData( ) );
-        REG_A = REG_A - get_1byteData( );
-        INCREMENT( 2 );
-        break;
+        case 0xE1:
+            // POP HL
+            REG_HL = read_from_stack(  );
+            INCREMENT( 1 );
+            break;
 
-//    case 0xD7:
-//        // RST 10h
-//        INCREMENT( 1 );
-//        push_to_stack( PC );
-//        PC = 0x10;
-//        break;
+        case 0xE2:
+            // LD (FF00+C),A
+            write_1byteData( 0xFF00 + REG_C, REG_A);
+            INCREMENT( 1 );
+            break;
 
-    case 0xD8:
-        // RET C
-        INCREMENT( 1 );
-        if ( getCarryFlag( ) )
-            PC = read_from_stack( );
-        break;
+        case 0xE5:
+            // PUSH HL
+            INCREMENT( 1 );
+            push_to_stack( REG_HL );
+            break;
 
-    case 0xD9:
-        // RETI
-        PC = read_from_stack( );
-        prog->IME = 1;
-        break;
+        case 0xE6:
+            // AND A,u8
+            setFlags_for_And_1Byte( REG_A, get_1byteData( ) );
+            REG_A = REG_A & get_1byteData( );
+            INCREMENT( 2 );
+            break;
 
-    case 0xDA:
-        // JP C,u16
-        myVal = get_2byteData( );
-        INCREMENT( 3 );
-        if( getCarryFlag( ) )
-            PC = myVal;
-        break;
+    //    case 0xE7:
+    //        // RST 20h
+    //        INCREMENT( 1 );
+    //        push_to_stack( PC );
+    //        PC = 0x20;
+    //        break;
 
-    case 0xDC:
-        // CALL C,u16
-        myVal = get_2byteData(  );
-        INCREMENT( 3 );
-        if( getCarryFlag( ) ){
+        case 0xE8: // !!!
+            // ADD SP,i8
+            setFlagsForAdd2Byte(SP, get_1byteSignedData());
+            SP = SP + get_1byteSignedData();
+            INCREMENT( 2 );
+            break;
+
+        case 0xE9:
+            // JP HL
+            INCREMENT( 1 );
+            PC = REG_HL;
+            break;
+
+        case 0xEA:
+            // LD (u16),A !!!
+            write_1byteData( get_2byteData( ), REG_A );
+            INCREMENT( 3 );
+            break;
+
+        case 0xEE:
+            // XOR A,u8
+            setFlags_for_Xor_1Byte( REG_A, get_1byteData() );
+            REG_A = REG_A ^ get_1byteData();
+            INCREMENT(1);
+            break;
+
+        case 0xEF:
+            // RST 28h !!!
+            INCREMENT( 1 );
             push_to_stack( PC );
-            PC = myVal;
+            PC = 0x0028;
+            break;
+
+        case 0xF0:
+            // LD A,(FF00+u8)
+            REG_A = get_1byteDataFromAddr( 0xFF00 + (uint8_t)get_1byteData( ) );
+            INCREMENT( 2 );
+            break;
+
+        case 0xF1:
+            // POP AF
+            REG_AF = read_from_stack( );
+            INCREMENT( 1 );
+            break;
+
+        case 0xF2:
+            // LD A,(FF00+C)
+            REG_A = get_1byteDataFromAddr( 0xFF00 + REG_C );
+            INCREMENT( 1 );
+            break;
+
+        case 0xF3:
+            // DI
+            prog->IME = 0;
+            INCREMENT( 1 );
+            break;
+
+        case 0xF5:
+            // PUSH AF
+            push_to_stack( REG_AF );
+            INCREMENT( 1 );
+            break;
+
+        case 0xF6:
+            // AND A,u8
+            setFlags_for_Or_1Byte( REG_A, (uint8_t)get_1byteData( ) );
+            REG_A = REG_A | get_1byteData(  );
+            INCREMENT( 2 );
+            break;
+
+        case 0xF7:
+            // RST 30h
+            INCREMENT( 1 );
+            push_to_stack( PC );
+            PC = 0x30;
+            break;
+
+        case 0xF8: // FAIL FLAGS
+            // LD HL,SP+i8
+            mySignVal = get_1byteSignedData();
+            REG_HL = SP + mySignVal;
+            setFlags(0,0,0,0);
+            if (((SP ^ mySignVal ^ REG_HL) & 0x100) == 0x100)
+                setFlags(0,0,3,1);
+            if (((SP ^ mySignVal ^ REG_HL) & 0x10) == 0x10)
+                setFlags(0,0,1,3);
+            INCREMENT( 2 );
+            break;
+
+        case 0xF9:
+            //LD SP,HL
+            SP = REG_HL;
+            INCREMENT( 1 );
+            break;
+
+        case 0xFA:
+            //LD A,(u16)
+            REG_A = get_1byteDataFromAddr( get_2byteData( ) );
+            INCREMENT( 3 );
+            break;
+
+        case 0xFB:
+            // EI
+            prog->IME = 1;
+            INCREMENT( 1 );
+            break;
+
+        case 0xFE:
+            // CP A,u8
+            setFlags_for_CP( REG_A, get_1byteData(  ) );
+            INCREMENT( 2 );
+            break;
+
+        case 0xFF: // !!!
+            // RST 38h
+            INCREMENT( 1 );
+            push_to_stack( PC );
+            prog->pc = 0x38;
+            break;
+
+        default:
+            printf("Funktion nicht unterstuetzt: 0x%02X @ addr.:%d\n",prog->opcode,PC);
+            break;
         }
-        break;
-
-    case 0xDE:
-        // SBC A,C
-        REG_A = REG_A - setFlags_for_Sbc_1Byte(  REG_A, get_1byteData() );
-        INCREMENT(1);
-        break;
-
-    case 0xDF:
-        // RST 38h
-        INCREMENT( 1 );
-        push_to_stack( PC );
-        prog->pc = 0x18;
-        break;
-
-    case 0xE0:
-        // LD (FF00+u8),A
-        write_1byteData( (0xFF00 + get_1byteData( )), REG_A );
-        INCREMENT( 2 );
-        break;
-
-    case 0xE1:
-        // POP HL
-        REG_HL = read_from_stack(  );
-        INCREMENT( 1 );
-        break;
-
-    case 0xE2:
-        // LD (FF00+C),A
-        write_1byteData( 0xFF00 + REG_C, REG_A);
-        INCREMENT( 1 );
-        break;
-
-    case 0xE5:
-        // PUSH HL
-        INCREMENT( 1 );
-        push_to_stack( REG_HL );
-        break;
-
-    case 0xE6:
-        // AND A,u8
-        setFlags_for_And_1Byte( REG_A, get_1byteData( ) );
-        REG_A = REG_A & get_1byteData( );
-        INCREMENT( 2 );
-        break;
-
-//    case 0xE7:
-//        // RST 20h
-//        INCREMENT( 1 );
-//        push_to_stack( PC );
-//        PC = 0x20;
-//        break;
-
-    case 0xE8: // !!!
-        // ADD SP,i8
-        setFlagsForAdd2Byte(SP, get_1byteSignedData());
-        SP = SP + get_1byteSignedData();
-        INCREMENT( 2 );
-        break;
-
-    case 0xE9:
-        // JP HL
-        INCREMENT( 1 );
-        PC = REG_HL;
-        break;
-
-    case 0xEA:
-        // LD (u16),A !!!
-        write_1byteData( get_2byteData( ), REG_A );
-        INCREMENT( 3 );
-        break;
-
-    case 0xEE:
-        // XOR A,u8
-        setFlags_for_Xor_1Byte( REG_A, get_1byteData() );
-        REG_A = REG_A ^ get_1byteData();
-        INCREMENT(1);
-        break;
-
-    case 0xEF:
-        // RST 28h !!!
-        INCREMENT( 1 );
-        push_to_stack( PC );
-        PC = 0x0028;
-        break;
-
-    case 0xF0:
-        // LD A,(FF00+u8)
-        REG_A = get_1byteDataFromAddr( 0xFF00 + get_1byteData( ) );
-        INCREMENT( 2 );
-        break;
-
-    case 0xF1:
-        // POP AF
-        REG_AF = read_from_stack( );
-        INCREMENT( 1 );
-        break;
-
-    case 0xF2:
-        // LD A,(FF00+C)
-        REG_A = get_1byteDataFromAddr( 0xFF00 + REG_C );
-        INCREMENT( 1 );
-        break;
-
-    case 0xF3:
-        // DI
-        prog->IME = 0;
-        INCREMENT( 1 );
-        break;
-
-    case 0xF5:
-        // PUSH AF
-        push_to_stack( REG_AF );
-        INCREMENT( 1 );
-        break;
-
-    case 0xF6:
-        // AND A,u8
-        setFlags_for_Or_1Byte(  REG_A, get_1byteData(  ) );
-        REG_A = REG_A | get_1byteData(  );
-        INCREMENT( 2 );
-        break;
-
-    case 0xF7:
-        // RST 30h
-        INCREMENT( 1 );
-        push_to_stack( PC );
-        PC = 0x30;
-        break;
-
-    case 0xF8:
-        // LD HL,SP+i8
-        mySignVal = get_1byteSignedData();
-        REG_HL = SP + mySignVal;
-        setFlags(0,0,0,0);
-        if (((SP ^ mySignVal ^ REG_HL) & 0x100) == 0x100)
-            setFlags(0,0,3,1);
-        if (((SP ^ mySignVal ^ REG_HL) & 0x10) == 0x10)
-            setFlags(0,0,1,0);
-        INCREMENT( 2 );
-        break;
-
-    case 0xF9:
-        //LD SP,HL
-        SP = REG_HL;
-        INCREMENT( 1 );
-        break;
-
-    case 0xFA:
-        //LD A,(u16)
-        REG_A = get_1byteDataFromAddr(  get_2byteData( ) );
-        INCREMENT( 3 );
-        break;
-
-    case 0xFB:
-        // EI
-        prog->IME = 1;
-        INCREMENT( 1 );
-        break;
-
-    case 0xFE:
-        // CP A,u8
-        setFlags_for_CP( REG_A, get_1byteData(  ) );
-        INCREMENT( 2 );
-        break;
-
-    case 0xFF: // !!!
-        // RST 38h
-        INCREMENT( 1 );
-        push_to_stack( PC );
-        prog->pc = 0x38;
-        break;
-
-    default:
-        printf("Funktion nicht unterstuetzt: 0x%02X @ addr.:%d\n",prog->opcode,PC);
-        while(1){}
-        INCREMENT( 1 );
-        break;
     }
+
+
 
     #if (DEBUG_OPM==1)
         printf("AF=0x%04X, BC=0x%04X, DE=0x%04X, HL=0x%04X, SP=0x%04X, PC:=0x%04X\n",REG_AF,REG_BC,REG_DE,REG_HL,SP,PC);
@@ -1706,6 +1704,8 @@ void gb_opcode_exec( )
         {
             stepNum = 0;
             printf("--- Stoped on PC: 0x%04X ---\n",prog->pc);
+            //for(uint8_t i = 0; i < 5; i++ )
+                //printf("--- PC: 0x%04X OP: 0x%02X ---\n",PC+i,prog->memory[PC+i]);
         }
         if( (!stepNum)  )
         {
@@ -1859,7 +1859,7 @@ void gb_exec_prefix( )
 
     case 0x16:
         // RL (HL)
-        myHelperVal = get_1byteDataFromAddr(  REG_HL);
+        myHelperVal = get_1byteDataFromAddr(REG_HL);
         RL(&myHelperVal );
         write_1byteData(  REG_HL, myHelperVal);
         break;
@@ -2027,9 +2027,9 @@ void gb_exec_prefix( )
 
     case 0x36:
         // SWAP (HL)
-        myHelperVal = get_1byteDataFromAddr(  REG_HL );
+        myHelperVal = get_1byteDataFromAddr( REG_HL );
         SWAP(&myHelperVal );
-        write_1byteData(  REG_HL, myHelperVal);
+        write_1byteData( REG_HL, myHelperVal);
         break;
 
     case 0x37:
@@ -2069,7 +2069,7 @@ void gb_exec_prefix( )
 
     case 0x3E:
         // SRL (HL)
-        myHelperVal = get_1byteDataFromAddr(  REG_HL);
+        myHelperVal = get_1byteDataFromAddr( REG_HL);
         SRL(&myHelperVal );
         write_1byteData(  REG_HL, myHelperVal);
         break;
@@ -2111,7 +2111,7 @@ void gb_exec_prefix( )
 
     case 0x46: // To test !!! !!! !!!
         // BIT 0,(HL)
-        BIT(0,get_1byteData(REG_HL));
+        BIT(0,get_1byteDataFromAddr(REG_HL));
         break;
 
     case 0x47:
@@ -2151,7 +2151,7 @@ void gb_exec_prefix( )
 
     case 0x4E: // To test !!! !!! !!!
         // BIT 1,(HL)
-        BIT(1,get_1byteData(REG_HL));
+        BIT(1,get_1byteDataFromAddr(REG_HL));
         break;
 
     case 0x4F:
@@ -2191,7 +2191,7 @@ void gb_exec_prefix( )
 
     case 0x56: // To test !!! !!! !!!
         // BIT 2,(HL)
-        BIT(2,get_1byteData(REG_HL));
+        BIT(2,get_1byteDataFromAddr(REG_HL));
         break;
 
     case 0x57:
@@ -2231,7 +2231,7 @@ void gb_exec_prefix( )
 
     case 0x5E: // To test !!! !!! !!!
         // BIT 3,(HL)
-        BIT(3,get_1byteData(REG_HL));
+        BIT(3,get_1byteDataFromAddr(REG_HL));
         break;
 
     case 0x5F:
@@ -2271,7 +2271,7 @@ void gb_exec_prefix( )
 
     case 0x66: // To test !!! !!! !!!
         // BIT 4,(HL)
-        BIT(4,get_1byteData(REG_HL));
+        BIT(4,get_1byteDataFromAddr(REG_HL));
         break;
 
     case 0x67:
@@ -2311,7 +2311,7 @@ void gb_exec_prefix( )
 
     case 0x6E: // To test !!! !!! !!!
         // BIT 5,(HL)
-        BIT(5,get_1byteData(REG_HL));
+        BIT(5,get_1byteDataFromAddr(REG_HL));
         break;
 
     case 0x6F:
@@ -2351,7 +2351,7 @@ void gb_exec_prefix( )
 
     case 0x76: // To test !!! !!! !!!
         // BIT 6,(HL)
-        BIT(6,get_1byteData(REG_HL));
+        BIT(6,get_1byteDataFromAddr(REG_HL));
         break;
 
     case 0x77:
@@ -2391,7 +2391,7 @@ void gb_exec_prefix( )
 
     case 0x7E: // To test !!! !!! !!!
         // BIT 7,(HL)
-        BIT(7,get_1byteData(REG_HL));
+        BIT(7,get_1byteDataFromAddr(REG_HL));
         break;
 
     case 0x7F:
@@ -2431,7 +2431,7 @@ void gb_exec_prefix( )
 
     case 0x86: // To test !!! !!! !!!
         // RES 0,(HL)
-        myHelperVal = get_1byteData(REG_HL);
+        myHelperVal = get_1byteDataFromAddr(REG_HL);
         RES(0,&myHelperVal);
         write_1byteData( REG_HL, myHelperVal );
         break;
@@ -2473,7 +2473,7 @@ void gb_exec_prefix( )
 
     case 0x8E: // To test !!! !!! !!!
         // RES 1,(HL)
-        myHelperVal = get_1byteData(REG_HL);
+        myHelperVal = get_1byteDataFromAddr(REG_HL);
         RES(1,&myHelperVal);
         write_1byteData( REG_HL, myHelperVal );
         break;
@@ -2515,7 +2515,7 @@ void gb_exec_prefix( )
 
     case 0x96: // To test !!! !!! !!!
         // RES 2,(HL)
-        myHelperVal = get_1byteData(REG_HL);
+        myHelperVal = get_1byteDataFromAddr(REG_HL);
         RES(2,&myHelperVal);
         write_1byteData( REG_HL, myHelperVal );
         break;
@@ -2557,7 +2557,7 @@ void gb_exec_prefix( )
 
     case 0x9E: // To test !!! !!! !!!
         // RES 3,(HL)
-        myHelperVal = get_1byteData(REG_HL);
+        myHelperVal = get_1byteDataFromAddr(REG_HL);
         RES(3,&myHelperVal);
         write_1byteData( REG_HL, myHelperVal );
         break;
@@ -2599,7 +2599,7 @@ void gb_exec_prefix( )
 
     case 0xA6: // To test !!! !!! !!!
         // RES 4,(HL)
-        myHelperVal = get_1byteData(REG_HL);
+        myHelperVal = get_1byteDataFromAddr(REG_HL);
         RES(4,&myHelperVal);
         write_1byteData( REG_HL, myHelperVal );
         break;
@@ -2641,7 +2641,7 @@ void gb_exec_prefix( )
 
     case 0xAE: // To test !!! !!! !!!
         // RES 5,(HL)
-        myHelperVal = get_1byteData(REG_HL);
+        myHelperVal = get_1byteDataFromAddr(REG_HL);
         RES(5,&myHelperVal);
         write_1byteData( REG_HL, myHelperVal );
         break;
@@ -2683,7 +2683,7 @@ void gb_exec_prefix( )
 
     case 0xB6: // To test !!! !!! !!!
         // RES 6,(HL)
-        myHelperVal = get_1byteData(REG_HL);
+        myHelperVal = get_1byteDataFromAddr(REG_HL);
         RES(6,&myHelperVal);
         write_1byteData( REG_HL, myHelperVal );
         break;
@@ -2725,7 +2725,7 @@ void gb_exec_prefix( )
 
     case 0xBE: // To test !!! !!! !!!
         // RES 7,(HL)
-        myHelperVal = get_1byteData(REG_HL);
+        myHelperVal = get_1byteDataFromAddr(REG_HL);
         RES(7,&myHelperVal);
         write_1byteData( REG_HL, myHelperVal );
         break;
@@ -2767,7 +2767,7 @@ void gb_exec_prefix( )
 
     case 0xC6: // To test !!! !!! !!!
         // SET 0,(HL)
-        myHelperVal = get_1byteData(REG_HL);
+        myHelperVal = get_1byteDataFromAddr(REG_HL);
         SET_fnx(0,&myHelperVal);
         write_1byteData( REG_HL, myHelperVal );
         break;
@@ -2809,7 +2809,7 @@ void gb_exec_prefix( )
 
     case 0xCE: // To test !!! !!! !!!
         // SET 1,(HL)
-        myHelperVal = get_1byteData(REG_HL);
+        myHelperVal = get_1byteDataFromAddr(REG_HL);
         SET_fnx(1,&myHelperVal);
         write_1byteData( REG_HL, myHelperVal );
         break;
@@ -2851,7 +2851,7 @@ void gb_exec_prefix( )
 
     case 0xD6: // To test !!! !!! !!!
         // SET 2,(HL)
-        myHelperVal = get_1byteData(REG_HL);
+        myHelperVal = get_1byteDataFromAddr(REG_HL);
         SET_fnx(2,&myHelperVal);
         write_1byteData( REG_HL, myHelperVal );
         break;
@@ -2893,7 +2893,7 @@ void gb_exec_prefix( )
 
     case 0xDE: // To test !!! !!! !!!
         // SET 3,(HL)
-        myHelperVal = get_1byteData(REG_HL);
+        myHelperVal = get_1byteDataFromAddr(REG_HL);
         SET_fnx(3,&myHelperVal);
         write_1byteData( REG_HL, myHelperVal );
         break;
@@ -2936,7 +2936,7 @@ void gb_exec_prefix( )
 
     case 0xE6: // To test !!! !!! !!!
         // SET 4,(HL)
-        myHelperVal = get_1byteData(REG_HL);
+        myHelperVal = get_1byteDataFromAddr(REG_HL);
         SET_fnx(4,&myHelperVal);
         write_1byteData( REG_HL, myHelperVal );
         break;
@@ -2978,7 +2978,7 @@ void gb_exec_prefix( )
 
     case 0xEE: // To test !!! !!! !!!
         // SET 5,(HL)
-        myHelperVal = get_1byteData(REG_HL);
+        myHelperVal = get_1byteDataFromAddr(REG_HL);
         SET_fnx(5,&myHelperVal);
         write_1byteData( REG_HL, myHelperVal );
         break;
@@ -3020,7 +3020,7 @@ void gb_exec_prefix( )
 
     case 0xF6: // To test !!! !!! !!!
         // SET 6,(HL)
-        myHelperVal = get_1byteData(REG_HL);
+        myHelperVal = get_1byteDataFromAddr(REG_HL);
         SET_fnx(6,&myHelperVal);
         write_1byteData( REG_HL, myHelperVal );
         break;
@@ -3062,7 +3062,7 @@ void gb_exec_prefix( )
 
     case 0xFE: // To test !!! !!! !!!
         // SET 7,(HL)
-        myHelperVal = get_1byteData(REG_HL);
+        myHelperVal = get_1byteDataFromAddr(REG_HL);
         SET_fnx(7,&myHelperVal);
         write_1byteData( REG_HL, myHelperVal );
         break;

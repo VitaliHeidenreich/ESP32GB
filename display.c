@@ -62,28 +62,101 @@ void display_close( display* disp )
 }
 
 // Einlesen der Tasten über SDL2
-uint8_t read_keys( SDL_Event ev )
+uint8_t read_keys( )
 {
-    uint8_t button_codes[ ] = {
-            SDL_SCANCODE_A, SDL_SCANCODE_W, SDL_SCANCODE_D, SDL_SCANCODE_S, // A W D S
-            SDL_SCANCODE_G, SDL_SCANCODE_H, SDL_SCANCODE_J, SDL_SCANCODE_K, // G H J K
-    };
+    static uint8_t iRet = 0xFF;
+    static uint16_t lastState = 0;
 
-    uint16_t iRet = 0;
+    SDL_Event ev;
 
-    for( int i = 0; i < sizeof(button_codes) / sizeof(uint8_t); i++ )
-    {
-        if( ev.key.keysym.scancode == button_codes[ i ] )
-        {
-            if(ev.type == SDL_KEYDOWN)
+    while( SDL_PollEvent( &ev ) )
+		{
+			switch (ev.type)
             {
-                iRet |= ( 1 << i );
+                case SDL_QUIT:
+                    printf("\nSDL is closing. Please wait!\n");
+                    return 0;
+                    break;
+
+                case SDL_KEYUP:
+                    switch(ev.key.keysym.sym)
+                    {
+                    case SDLK_a:
+                        iRet |=  (1<<1);
+                        break;
+                    case SDLK_s:
+                        iRet |=  (1<<3);
+                        break;
+                    case SDLK_w:
+                        iRet |=  (1<<2);
+                        break;
+                    case SDLK_d:
+                        iRet |=  (1<<0);
+                        break;
+
+                    case SDLK_g:
+                        iRet |=  (1<<4);
+                        break;
+                    case SDLK_h:
+                        iRet |=  (1<<5);
+                        break;
+                    case SDLK_j:
+                        iRet |=  (1<<6);
+                        break;
+                    case SDLK_k:
+                        iRet |=  (1<<7);
+                        break;
+                    }
+                    break;
+
+                case SDL_KEYDOWN:
+                    switch(ev.key.keysym.sym)
+                    {
+                    case SDLK_a:
+                        iRet &= ~(1<<1);
+                        break;
+                    case SDLK_s:
+                        iRet &= ~(1<<3);
+                        break;
+                    case SDLK_w:
+                        iRet &= ~(1<<2);
+                        break;
+                    case SDLK_d:
+                        iRet &=  ~(1<<0);
+                        break;
+
+                    case SDLK_g:
+                        iRet &=  ~(1<<4);
+                        break;
+                    case SDLK_h:
+                        iRet &=  ~(1<<5);
+                        break;
+                    case SDLK_j:
+                        iRet &=  ~(1<<6);
+                        break;
+                    case SDLK_k:
+                        iRet &=  ~(1<<7);
+                        break;
+                    }
+                    break;
+
+                default:
+                    break;
             }
-        }
+		}
+		//printf("Button Val: ");printBinary(iRet);
+    prog->keys = iRet;
+
+    if( prog->keys != lastState )
+    {
+        //JOYPAD_IR_SET
+        prog->memory[0xFF0F] |= (1<<4);
+        lastState = prog->keys;
     }
-    iRet = ~iRet;
-    return iRet;
+
+    return 1;
 }
+
 
 uint16_t GBC_colors[ 4 ] = {10,70,140,200};
 
@@ -111,7 +184,6 @@ void gb_ShowScreen( )
             SDL_RenderFillRect(disp.renderer, &srcrect);
         }
     }
-
     SDL_RenderPresent( disp.renderer );
 }
 
