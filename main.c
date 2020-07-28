@@ -42,8 +42,9 @@ int main(int argc, char** argv)
             lastTime = currentTime;
             gb_program_cycle( );
             prog->tikz = 0;
+            // read keys
+            running = read_keys( );
         }
-        running = read_keys( );
     }
 
     display_close( &disp );

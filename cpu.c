@@ -528,7 +528,7 @@ void resetInterrupt( uint8_t ISR )
 }
 
 /****************************************************************************************************
-:::::::::: HILFSFUNKTIONEN :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::::::::: HILFSFUNKTIONEN :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ****************************************************************************************************/
 void setFlags( uint8_t Z, uint8_t N, uint8_t H, uint8_t C )
 {
@@ -601,6 +601,35 @@ void setFlags( uint8_t Z, uint8_t N, uint8_t H, uint8_t C )
     }
 }
 
+void setZeroFlag( uint8_t f )
+{
+    if( !f )
+        prog->reg.f &= 0b01111111;
+    else
+        prog->reg.f |= 0b10000000;
+}
+void setNegativeFlag( uint8_t f )
+{
+    if( !f )
+        prog->reg.f &= 0b10111111;
+    else
+        prog->reg.f |= 0b01000000;
+}
+void setHalfCarryFlag( uint8_t f )
+{
+    if( !f )
+        prog->reg.f &= 0b11011111;
+    else
+        prog->reg.f |= 0b00100000;
+}
+void setCarryFlag( uint8_t f )
+{
+    if( !f )
+        prog->reg.f &= 0b11101111;
+    else
+        prog->reg.f |= 0b00010000;
+}
+
 uint8_t getZeroFlag(  )
 {
     if( prog->reg.f & 0x80 )
@@ -628,6 +657,8 @@ uint8_t getCarryFlag(  )
         return 1;
     return 0;
 }
+
+/// Ende flag operationen #######################################
 
 int get_signed_8(uint8_t data)
 {
@@ -844,9 +875,8 @@ void do_DAA(  )
 
 void BIT(uint8_t bit, uint8_t val)
 {
-    //printf("BIT %d @ PC: 0x%04X\n", bit,PC);
     // write bit x to flag Z
-    if( val & (1 << bit) )
+    if( !(val & (1<<bit)) )
         setFlags( 1, 0, 1, 3);
     else
         setFlags( 0, 0, 1, 3);

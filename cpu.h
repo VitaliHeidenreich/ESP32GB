@@ -208,6 +208,11 @@ uint8_t getNegativeFlag( );
 uint8_t getHalfCarryFlag( );
 uint8_t getCarryFlag( );
 
+void setZeroFlag( uint8_t f );
+void setNegativeFlag( uint8_t f );
+void setHalfCarryFlag( uint8_t f );
+void setCarryFlag( uint8_t f );
+
 // GET SIGNED DATA
 int get_signed_8(uint8_t data);
 
