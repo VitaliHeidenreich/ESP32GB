@@ -316,28 +316,27 @@ uint16_t safePcAndUnsetIr(uint8_t IrNum)
 
 
 /*************************************************************************************
-*   ##################################################################################
-*   ##################################################################################
+* ####################################################################################
+* ####################################################################################
 *
 *   Hilfsfunktionen des Gameboys
 *   Lesen und schreiben auf den Speicher uns sonstiges fuer die Op Abarbeitung
 *
-*   ##################################################################################
-*   ##################################################################################
+* ####################################################################################
+* ####################################################################################
 *************************************************************************************/
 // Lese 1 Byte direkt von der nächsten Stelle oder aus der Adresse
 uint8_t get_1byteData(  )
 {
-    if( (prog->pc + 1) == 0xFF00 )
+    if( ( PC + 1 ) == 0xFF00 )
     {
-        printf("Tasten wurde ueber den falschen Weg eingelesen!\n");
+        printf("Tasten wurden ueber den falschen Weg eingelesen!\n");
         while(1){}
     }
     else
     {
-        return ( prog->memory[ prog->pc + 1 ] );
+        return ( prog->memory[ PC + 1 ] );
     }
-
 }
 /************************************************************************************
 * Read 1 byte from defined address
@@ -359,7 +358,6 @@ uint8_t get_1byteDataFromAddr(  uint16_t addr )
 
     if( addr == 0xFF00 )
     {
-        uint8_t iRet;
         // Setzen des ISRs
         if(lastButonState != (prog->keys & 0x0F) )
         {
@@ -368,33 +366,11 @@ uint8_t get_1byteDataFromAddr(  uint16_t addr )
         }
 
         // Wenn Pfeiltasten angefordert werden:
-        if( (~JOYPAD_STATE) & ( 1 << 4 ) )
-        {
-//            if(PC == 0x2326)
-//            {
-//                printf(" Bitte taste eingeben: ");
-//                if( getchar() == 'w')
-//                    iRet = 0b11101011;
-//                else
-//                    iRet = 0b11100111;
-//            }
-//            else
-//                iRet = 0b11111111;
-              iRet = (((  prog->keys  ) & 0x0F) | (JOYPAD_STATE&0xF0) | 0xC0);
-        }
-
-
-
+        if( (JOYPAD_STATE&0x30) == 0x20 )
+              return (((  prog->keys  ) & 0x0F) | 0x20);
         // Wenn Funktionstasten angefragt werden:
         else
-            iRet = ((( prog->keys >> 4 ) & 0x0F) | (JOYPAD_STATE&0xF0) | 0xC0);
-
-        return iRet;
-    }
-    else if( PC == 0x51F )
-    {
-        printf("\nAndesse: 0x%04X, ret ist 0x80", PC);
-        return 0x80;
+              return ((( prog->keys >> 4 ) & 0x0F) | 0x10);
     }
     else
     {
@@ -423,10 +399,10 @@ void write_1byteData( uint16_t addr, uint8_t data )
        // https://gbdev.gg8.se/wiki/articles/Timer_and_Divider_Registers
        switch( data & 0x03 )
         {
-            case 0: prog->clockSpeedCycles = CPU_SPEED_GAMEBOY/4096; break ;//1024
-            case 1: prog->clockSpeedCycles = CPU_SPEED_GAMEBOY/268400; break;//16
-            case 2: prog->clockSpeedCycles = CPU_SPEED_GAMEBOY/65536; break ;//64
-            case 3: prog->clockSpeedCycles = CPU_SPEED_GAMEBOY/16384; break ;//256
+            case 0: prog->clockSpeedCycles = CPU_SPEED_GAMEBOY/4096;    break ;//1024
+            case 1: prog->clockSpeedCycles = CPU_SPEED_GAMEBOY/268400;  break;//16
+            case 2: prog->clockSpeedCycles = CPU_SPEED_GAMEBOY/65536;   break ;//64
+            case 3: prog->clockSpeedCycles = CPU_SPEED_GAMEBOY/16384;   break ;//256
             default: break ;
         }
         prog->memory[ 0xFF07 ] = data;
@@ -450,22 +426,27 @@ void write_1byteData( uint16_t addr, uint8_t data )
     {
         prog->memory[ 0xFF04 ] = 0x00;
     }
-    // writing to ECHO ram also writes in RAM
+    // write to ECHO ram == write into RAM
     else if ( ( addr >= 0xE000 ) && (addr < 0xFE00) )
     {
         prog->memory[ addr ] = data;
-        prog->memory[ addr - 0x2000 ] = data;
+        //prog->memory[ addr - 0x2000 ] = data;
     }
     // sonst schreibe auf den RAM
     else
     {
-        // This area is restricted.
+        // Verbotener Bereich
         if (((addr >= 0xFEA0) && (addr <= 0xFEFF)) || ((addr >= 0xFF4C) && (addr <= 0xFF7F)))
         {
-            // nop
+            printf("Error. Kein Schreiben auf die Adresse: 0x%04X zugelassen.\n", addr);
         }
         else
         {
+            // Just a Test; To Del after development
+            if( addr == 0xFFB1)
+            {
+                printf("Schreiben auf Adresse: 0xFFB1: "); printBinary(data);
+            }
             prog->memory[ addr ] = data;
         }
     }
@@ -519,14 +500,6 @@ void push_to_stack( uint16_t data )
         prog->sp--;
         prog->memory[ prog->sp ] = (data & 0xff);
         prog->sp--;
-
-        //print stack
-//        uint16_t i = prog->sp + 1;
-//        while( i <= 0xCFFF )
-//        {
-//            printf(" --- 0x %02X %02X\n", prog->memory[ i+1 ], prog->memory[ i ]);
-//            i +=2;
-//        }
 }
 // TESTED!
 uint16_t read_from_stack( )
@@ -672,50 +645,50 @@ int get_signed_8(uint8_t data)
     return iRet;
 }
 
-void setFlags_for_Add_1Byte(  uint8_t oldVal, uint8_t valToAdd )
+void setFlags_for_Add_1Byte(  uint8_t val, uint8_t valToAdd )
 {
-    setFlags( 0, 0, 0, 0 );
+    setFlags( 0, UNSET, 0, 0 );
     // Zero flag
-    if( ((oldVal+valToAdd)&0xff) == 0x0 )
+    if( (( val + valToAdd)&0xff ) == 0x0 )
         setFlags( 1, 3, 3, 3 );
     // Half carry flag
-    if( (( oldVal & 0xf) + (valToAdd & 0xf) ) & 0x10 )
+    if( ( val ^ valToAdd ^ ( val + valToAdd ) ) & 0x10 )
         setFlags( 3, 3, 1, 3 );
     // Carry flag
-    if( (oldVal + valToAdd) > 0xff )
+    if( ( val + valToAdd) > 0xff )
         setFlags( 3, 3, 3, 1 );
 }
 
 void setFlags_for_Add_2Byte(  uint16_t oldVal, uint16_t valToAdd )
 {
-    uint16_t result = oldVal + valToAdd;
-    setFlags( 3, 0, 0, 0 );
+    uint32_t result = oldVal + valToAdd;
+    setFlags( UNMOD, UNSET, 0, 0 );
 
-    if (result & 0x10000)
+    if (result > 0xFFFF)
         setFlags( 3, 0, 3, 1 );
     if ((oldVal ^ valToAdd ^ (result & 0xFFFF)) & 0x1000)
         setFlags( 3, 0, 1, 3 );
 }
 
-uint8_t setFlags_for_Adc_1Byte(  uint8_t oldVal, uint8_t valToAdd )
+void ADC( uint8_t *val, uint8_t valToAdd )
 {
-    uint8_t iRet = 0;
+    uint16_t iRet = *val + valToAdd;
 
     if( getCarryFlag( ) )
         iRet = iRet + 1;
 
-    setFlags( 0, 0, 0, 0 );
+    setFlags( 0, UNSET, 0, 0 );
     // Zero flag
-    if( ((oldVal+valToAdd+iRet)&0xff) == 0x0 )
+    if( (iRet&0xff) == 0x0 )
         setFlags( 1, 3, 3, 3 );
     // Half carry flag
-    if( (( oldVal & 0xf) + ((valToAdd+iRet) & 0xf) ) & 0x10 )
+    if( (*val ^ valToAdd ^ iRet) & 0x10 )
         setFlags( 3, 3, 1, 3 );
     // Carry flag
-    if( (oldVal + valToAdd + iRet) > 0xff )
+    if( iRet & 0xff00 )
         setFlags( 3, 3, 3, 1 );
 
-    return (iRet + valToAdd);
+    *val = iRet & 0xff;
 }
 
 // to check FAIL
@@ -736,12 +709,12 @@ void setFlags_for_Sub_1Byte(  uint8_t oldVal, uint8_t valToSub )
 void setFlags_for_CP(  uint8_t oldVal, uint8_t valToSub )
 {
     // Z N HC C
-    setFlags( 0, 1, 0, 0 );
+    setFlags( 0, SET, 0, 0 );
     // Zero flag
     if( oldVal == valToSub )
         setFlags( 1, 3, 3, 3 );
     // Half Carry flag !!!
-    if (((oldVal - valToSub) & 0xF) > (oldVal & 0xF))
+    if ((oldVal ^ valToSub ^ (oldVal - valToSub)) & 0x10)
     {
         setFlags( 3, 3, 1, 3 );
     }
@@ -751,25 +724,25 @@ void setFlags_for_CP(  uint8_t oldVal, uint8_t valToSub )
 }
 
 // to check
-uint8_t setFlags_for_Sbc_1Byte(  uint8_t oldVal, uint8_t valToSub )
+void SBC( uint8_t *val, uint8_t valToSub )
 {
-    uint8_t iRet = 0;
+    uint16_t iRet = *val - valToSub;
 
     if( getCarryFlag( ) )
-        iRet = 1;
+        iRet -= 1;
 
-    setFlags( 0, 1, 0, 0 );
+    setFlags( 0, SET, 0, 0 );
     // Zero flag
-    if( ((oldVal-valToSub-iRet)&0xff) == 0x0 )
+    if( (iRet&0xff) == 0x0 )
         setFlags( 1, 3, 3, 3 );
     // Half carry flag
-    if( (( oldVal & 0xf) - ((valToSub+iRet) & 0xf) ) & 0x10 )
+    if( (*val ^ valToSub ^ iRet) & 0x10 )
         setFlags( 3, 3, 1, 3 );
     // Carry flag
-    if( oldVal < (valToSub+iRet) )
+    if( iRet & 0xff00 )
         setFlags( 3, 3, 3, 1 );
 
-    return (iRet + valToSub);
+    *val = iRet & 0xff;
 }
 
 // to check
@@ -797,80 +770,81 @@ void setFlags_for_Or_1Byte(  uint8_t one, uint8_t two )
 {
     // Zero flag
     one |= two;
-    if( one == 0x00 )
+    if( (one&0xff) == 0x00 )
         setFlags( 1, 0, 0, 0);
     else
         setFlags( 0, 0, 0, 0);
 }
 
-void setFlags_for_Inc_1Byte(  uint8_t oldVal )
+void setFlags_for_Inc_1Byte(  uint8_t val )
 {
-    setFlags( 0, 0, 0, 3 );
+    setFlags( 0, UNSET, 0, UNMOD );
     // Zero flag
-    if( ((oldVal+1)&0xff) == 0x0 )
+    if( val == 0xff )
         setFlags( 1, 3, 3, 3 );
     // Half carry flag
-    if( (( oldVal & 0xf) + 0x1 ) & 0x10 )
+    if( (val & 0x0f) == 0x0f )
         setFlags( 3, 3, 1, 3 );
 }
 
-void setFlags_for_Dec_1Byte(  uint8_t oldVal )
+void setFlags_for_Dec_1Byte(  uint8_t val )
 {
-    setFlags( 0, 1, 0, 3 );
+    setFlags( 0, SET, 0, UNMOD );
     // Zero flag
-    if( ((oldVal-1)&0xff) == 0x0 )
+    if( val == 0x01 )
         setFlags( 1, 3, 3, 3 );
     // Half Carry flag
-    if( (( oldVal & 0xf) - 0x1 ) & 0x10 )
+    if( ((uint8_t)(val - 0x01) & 0x0f) == 0x0f )
         setFlags( 3, 3, 1, 3 );
 }
 
 void setFlagsForAdd2Byte( uint16_t a, uint16_t b)
 {
-    setFlags(0,0,0,0);
-    if( ((a & 0xFFF) + (b & 0xFFF))>0xFFF )
+    uint32_t iRes = a + b;
+    setFlags(UNSET,UNSET,0,0);
+    if( (a ^ b ^ (iRes&0xffff)) & 0x1000 )
         setFlags(3,3,1,3);
-    if( (a+b) > 0xFFFF )
+    if( iRes > 0xffff )
         setFlags(3,3,3,1);
 }
 
 void do_DAA(  )
 {
     printf("DAA\n");
-    // Korrektur für Subtraktion
-    if( getNegativeFlag( ) )
+    // Wenn vorher eine Subtraktion gamacht worden ist
+    if (!getNegativeFlag( ))
     {
-        if( getHalfCarryFlag( ) )
-        {
-            prog->reg.a = (prog->reg.a - 0x6) & 0xFF;
+        if (getCarryFlag() || REG_A > 0x99) {
+            REG_A += 0x60;
+            setFlags(3,3,3,1);
         }
-        if( getCarryFlag( ) )
-        {
-            prog->reg.a = prog->reg.a - 0x60;
+        if (getHalfCarryFlag() || (REG_A & 0x0f) > 0x09) {
+            REG_A += 0x6;
         }
     }
-    // Korrektur für Addition
+    // Wenn vorher eine Addition gamacht worden ist
+    else // after a subtraction, only adjust if (half-)carry occurred
+    {
+        if (getCarryFlag())
+        {
+            REG_A -= 0x60;
+            setFlags(3,3,3,1);
+        }
+        if (getHalfCarryFlag())
+        {
+            REG_A -= 0x6;
+        }
+    }
+    // these flags are always updated
+    if(REG_A)
+        setFlags(0,3,UNSET,3);
     else
-    {
-        if( ((prog->reg.a & 0x0f) > 0x9) || getHalfCarryFlag( ) )
-        {
-            prog->reg.a = prog->reg.a + 0x6;
-        }
-        if( (((prog->reg.a & 0xf0)>>4) > 0x9) || getCarryFlag( ) )
-        {
-            prog->reg.a = prog->reg.a + 0x60;
-            setFlags( 3,3,3,1);
-        }
-    }
-    if((prog->reg.a & 0xff) == 0x0)
-        setFlags( 1,3,3,3);
-
-    setFlags( 3,3,0,3);
+        setFlags(1,3,UNSET,3);
 }
 
 void BIT(uint8_t bit, uint8_t val)
 {
-    printf("BIT %d @ PC: 0x%04X\n", bit,PC);
+    //printf("BIT %d @ PC: 0x%04X\n", bit,PC);
     // write bit x to flag Z
     if( val & (1 << bit) )
         setFlags( 1, 0, 1, 3);
@@ -969,7 +943,7 @@ void RLA(uint8_t *val)
 void RLCA(uint8_t *val)
 {
     uint8_t oldval = *val;
-    *val = ((*val << 1) & 0xFE) | ((*val & 0x80)>>7);
+    *val = ( *val << 1 ) | ( *val >>7 );
     // Set flags
     if( oldval & 0x80 )
         setFlags(0,0,0,1);
@@ -982,9 +956,10 @@ void RRA(uint8_t *val)
     uint8_t oldval = *val;
     *val = (((oldval >> 1)) | ( getCarryFlag( ) << 7 ));
     // Set flags
-    setFlags(0,0,0,0);
     if( oldval & 0x01 )
-        setFlags(3,3,3,1);
+        setFlags(0,0,0,1);
+    else
+        setFlags(0,0,0,0);
 }
 
 void RRCA(uint8_t *val)

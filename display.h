@@ -7,7 +7,7 @@
 #include "cpu.h"
 #include "main.h"
 
-#define PIXEL_SIZE 4
+#define PIXEL_SIZE 3
 
 
 #define WIDTH         160
