@@ -282,7 +282,10 @@ void gb_interrupts( )
         // Wird nicht unbedingt benötigt
         else if( SERIAL_IR_ENABLED && SERIAL_IR_SET )
         {
-            // TBD
+            programCounterBeforeIR = safePcAndUnsetIr( 3 );
+            waitForFinishActIR = 1;
+            // Trigger INT 60h
+            PC = 0x58;
         }
         // Fast niemaden interessiert diese Funktion :-) !!!
         else if( JOYPAD_IR_ENABLED && JOYPAD_IR_SET )
@@ -387,7 +390,7 @@ void write_1byteData( uint16_t addr, uint8_t data )
     // Kein Schreiben auf das ROM erlaubt
     if ( addr < 0x8000 )
     {
-        printf("Kein Schreiben auf diese Adresse erlaubt!\n");
+        //nop
     }
     // Anfordern der Tasten
     else if( addr == 0xFF00 )
@@ -438,15 +441,10 @@ void write_1byteData( uint16_t addr, uint8_t data )
         // Verbotener Bereich
         if (((addr >= 0xFEA0) && (addr <= 0xFEFF)) || ((addr >= 0xFF4C) && (addr <= 0xFF7F)))
         {
-            printf("Error. Kein Schreiben auf die Adresse: 0x%04X zugelassen.\n", addr);
+            //nop
         }
         else
         {
-            // Just a Test; To Del after development
-            if( addr == 0xFFB1)
-            {
-                printf("Schreiben auf Adresse: 0xFFB1: "); printBinary(data);
-            }
             prog->memory[ addr ] = data;
         }
     }
@@ -841,7 +839,6 @@ void setFlagsForAdd2Byte( uint16_t a, uint16_t b)
 
 void do_DAA(  )
 {
-    printf("DAA\n");
     // Wenn vorher eine Subtraktion gamacht worden ist
     if (!getNegativeFlag( ))
     {

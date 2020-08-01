@@ -43,7 +43,7 @@ void display_open(display *disp, uint8_t width, uint8_t height)
             }
             else
             {
-                SDL_SetRenderDrawColor( disp->renderer, 255,255,255,255);
+                SDL_SetRenderDrawColor( disp->renderer, 100,100,100,255);
                 SDL_RenderClear( disp->renderer );
                 printf("Renderer erfolgreich angelegt!\n");
             }
@@ -179,7 +179,7 @@ void gb_ShowScreen( )
             srcrect.w = (x+1)*PIXEL_SIZE;
             srcrect.h = (y+1)*PIXEL_SIZE;
 
-            color = GBC_colors[ prog->ausgabeGrafik[y][x] ];
+            color = 240 - (prog->ausgabeGrafik[y][x] * 80);
             SDL_SetRenderDrawColor( disp.renderer, color,color,color,200);
             SDL_RenderFillRect(disp.renderer, &srcrect);
         }

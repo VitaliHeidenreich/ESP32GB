@@ -512,7 +512,6 @@ void gb_opcode_exec( )
 
         case 0x40:
             // LD B,B
-            printf("LD B,B at 0x%04X\n", PC);
             REG_B = REG_B;
             INCREMENT( 1 );
             break;

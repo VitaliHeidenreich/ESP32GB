@@ -13,7 +13,7 @@
 #define FPS_Rate 60
 
 // it is just an example how to use roms
-char* filename = "../games/DrMario.gb";
+char* filename = "../games/Tetris.gb";
 
 int main(int argc, char** argv)
 {
@@ -23,7 +23,7 @@ int main(int argc, char** argv)
     if ( gb_program_load( filename ) != 0 )
     {
         free( prog );
-        printf("Failed program load!\n");
+        printf("Programm konnte nicht geladen werden, Ausfuehrung wird beendet!\n");
         return 1;
     }
 

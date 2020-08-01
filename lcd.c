@@ -38,6 +38,11 @@
 #define WIN_POS_X               (prog->memory[0xFF4B]-7)
 #define WIN_POS_Y               (prog->memory[0xFF4A])
 
+/// Farbenzuweisung
+uint8_t getGrayShadeForBG( uint8_t myColor )
+{
+    return ((prog->memory[0xFF47] >> (myColor*2)) &0x03 );
+}
 
 /****************************************************************************************************************
 *  Render Hintergrund (statische Sachen)
@@ -49,6 +54,7 @@ void RenderBackground( )
     uint8_t  signedLocation = 0;
     uint8_t  usingWindow = 0;
     uint16_t xPosStart, yPosStart, tileAddr;
+    uint8_t myColor = 0;
 
     uint8_t apix, bpix;
 
@@ -128,7 +134,9 @@ void RenderBackground( )
             apix = get_1byteDataFromAddr(tileAddr + line + 0);
             bpix = get_1byteDataFromAddr(tileAddr + line + 1);
 
-            prog->ausgabeGrafik[ LY_LINE ][ pixel ] = ( ((apix >> (7-(SCX+pixel)%8))&0x1) ) | (((bpix >> (7-(SCX+pixel)%8))&0x1) << 1);
+            myColor = ( ((apix >> (7-(SCX+pixel)%8))&0x1) ) | (((bpix >> (7-(SCX+pixel)%8))&0x1) << 1);
+
+            prog->ausgabeGrafik[ LY_LINE ][ pixel ] = getGrayShadeForBG( myColor );
         }
     }
 }
@@ -138,20 +146,11 @@ void RenderBackground( )
 ****************************************************************************************************************/
 void RenderSprites()
 {
-    int8_t yPos, xPos;
-    uint8_t tLoc, attr, ySize;
+    int16_t yPos, xPos;
+    uint16_t tLoc, attr, ySize;
     uint8_t myPixelColor = 0;
 
     uint8_t spriteLine, apix, bpix;
-
-    static uint16_t staticDebuger = 0;
-    staticDebuger ++;
-
-    if(staticDebuger >= 2000)
-    {
-        staticDebuger = 0;
-        //printf("Inhalt FE00 ff: 0x%04X  0x%04X  0x%04X  0x%04X \n", get_1byteDataFromAddr(0xFE00), get_1byteDataFromAddr(0xFE01), get_1byteDataFromAddr(0xFE02), get_1byteDataFromAddr(0xFE03));
-    }
 
     // Sprites aktiviert?
     if( LCD_OBJ_DISPENA )
@@ -176,8 +175,11 @@ void RenderSprites()
             // Testen ob die Zeile betroffen ist, falls nein: "dont care!"
             if (( LY_LINE >= yPos ) && ( LY_LINE < ( yPos + ySize )))
             {
-                // Spiegelung in y-Richtung funktioniert aktiell nicht (nicht implementiert)
                 spriteLine = LY_LINE - yPos;
+
+                // Spiegelung in y-Richtung
+                if ( (attr & 0b01000000) )
+                    spriteLine = ySize - spriteLine;
 
  				apix = prog->memory[ 0x8000 + (tLoc << 4) + spriteLine*2 + 0 ] ;
  				bpix = prog->memory[ 0x8000 + (tLoc << 4) + spriteLine*2 + 1 ] ;
@@ -193,9 +195,9 @@ void RenderSprites()
  					// ist die Farbe transparent? Falls nein, dann schreibe Pixel
                     if (!(myPixelColor == 0))
                     {
-                        if( (LY_LINE <= 143) && (( xPos + tilePixel) <= 159) )
+                        if( (LY_LINE <= 143) && ((xPos + tilePixel) <= 159) )
                         {
-                            prog->ausgabeGrafik[ LY_LINE ][ tilePixel + xPos ] = myPixelColor;
+                            prog->ausgabeGrafik[ LY_LINE ][ xPos + tilePixel ] = myPixelColor;
                         }
                     }
                 }
