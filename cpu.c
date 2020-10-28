@@ -6,6 +6,7 @@
 #include "display.h"
 #include "bios.h"
 #include "lcd.h"
+#include <math.h>
 
 // Define Timers
 #define TIMER_DEVIDER_REGISTER_FF04  (prog->memory[0xFF04])
@@ -46,8 +47,6 @@ gameboy* gb_start( )
     p->reg.de       = 0x00d8;
     p->reg.hl       = 0x014d;
     // p->ticks        = 0x0000;
-    // Nur zum Spaß --> Gameboy Logo Zeigen
-    p->bios_done    = 0;
     // alle Tasten als nicht gedrueckt initialisieren
     p->keys = 0xFF;
 
@@ -102,15 +101,20 @@ gameboy* gb_start( )
 
     p->memory[0xFFFF] = 0x00 ;
     //p->memory[0xFFFF] |= (1<<4);
+    //Neu
+    p->rombank = 1;
+    p->rambankenabled = 0;
+    p->ram_mode_selected = 0;
 
     return p;
 }
 
 // ####################################################################################
 // Lade Cartrige in den Speicher
+uint16_t ram_size[5][2] = {{0,0},{2,01},{8,1},{32,4},{128,16}};
 uint8_t gb_program_load( char* filename )
 {
-    printf("ROM is loading please wait... ");
+    printf("WAIT. ROM is loading please wait...\n\n");
 
     // Datei öffnen und binär lesen
     FILE* f = fopen(filename, "rb");
@@ -133,22 +137,15 @@ uint8_t gb_program_load( char* filename )
     }
 
     // Speichern der Datei im Buffer
-    fread(prog->memory, 1, 0x200000, f);
+    fread(prog->memory, 1, MEM_SIZE, f);
 
     //load_bios( prog );
 
-    switch (prog->memory[0x0143])
-    {
-    case 0x80:
-        printf("\nError: Gameboy Color wird derzeit nicht unterstützt!\n");
-        return 1;
-        break;
-    default:
-        break;
-    }
+    printf("Cartridge Type: \t%d\n", prog->memory[0x0147] );
+    printf("ROM size: \t\t%d (%d Banks, %d kB)\n", prog->memory[0x0148], (int)pow(2,prog->memory[0x0148]+1), 16*((int)pow(2,prog->memory[0x0148]+1)) );
+    printf("RAM size: \t\t%d (%d kB)\n", ram_size[prog->memory[0x0147]][1], ram_size[prog->memory[0x0147]][0] );
 
-    printf("DONE! %d.%d kB added. (0x%02X)\n", ((size)/1024), ((size) % 1024),size );
-
+    printf("\nDONE! %d.%d kB added. (0x%02X)\n", ((size)/1024), ((size) % 1024),size );
     return 0;
 }
 
@@ -185,7 +182,7 @@ void gb_program_cycle( )
 *                01: 262144 Hz  (~268400 Hz SGB)
 *                10:  65536 Hz   (~67110 Hz SGB)
 *                11:  16384 Hz   (~16780 Hz SGB)
-*       INT 50 - Timer Interrupt
+*       INT 50 rambankenable- Timer Interrupt
 **************************************************************************************/
 // Nicht sicher ob es so passt!!!!!!!
 void gb_update_timer( uint16_t cycles )
@@ -331,15 +328,7 @@ uint16_t safePcAndUnsetIr(uint8_t IrNum)
 // Lese 1 Byte direkt von der nächsten Stelle oder aus der Adresse
 uint8_t get_1byteData(  )
 {
-    if( ( PC + 1 ) == 0xFF00 )
-    {
-        printf("Tasten wurden ueber den falschen Weg eingelesen!\n");
-        while(1){}
-    }
-    else
-    {
-        return ( prog->memory[ PC + 1 ] );
-    }
+    return ( prog->memory[ PC + 1 ] );
 }
 /************************************************************************************
 * Read 1 byte from defined address
@@ -387,19 +376,58 @@ uint8_t get_1byteDataFromAddr(  uint16_t addr )
 *************************************************************************************/
 void write_1byteData( uint16_t addr, uint8_t data )
 {
-    // Kein Schreiben auf das ROM erlaubt
-    if ( addr < 0x8000 )
+    if( addr > 0xFFFF )
     {
-        //nop
+        printf("STOPP da > 0xffff!");
+        while(1){}
     }
-    // Anfordern der Tasten
+    // Kein Schreiben auf das ROM erlaubt #############################################
+    else if ( addr < 0x8000 )
+    {
+        // Turn ON/OFF RAM ACCESS
+        if( addr < 0x1FFF )
+        {
+            printf("\nRAM access requested. %d", data);
+            if(data == 0x0A)
+                prog->rambankenabled = 1;
+            else
+                prog->rambankenabled = 0;
+                // ToDo --> Write the stored data to a safe place
+        }
+        // Switch ROM Bank !!! nicht sicher !!!
+        if( addr == 0x2000 )
+        {
+            // TBD!
+            printf("\nROM Bank change request to %d.", data);
+            prog->rombank = data;
+        }
+        // Select ROM or RAM mode
+        if( addr >= 0x6000 )
+        {
+            // 0x00 = ROM and 0x01 = RAM
+            prog->ram_mode_selected = data;
+            if( !data )
+                printf("\nROM mode selected.");
+            else
+                printf("\nRAM mode selected.");
+        }
+    }
+    // Schreibe auf externes RAM (cartridge) #########################################
+    else if ( (addr >=0xA000) && (addr < 0xC000) )
+    {
+        if( prog->rambankenabled )
+            prog->memory[ addr ] = data;
+    }
+    // Anfordern der Tasten ##########################################################
     else if( addr == 0xFF00 )
     {
         prog->memory[ 0xFF00 ] = data;
     }
+    // Einstellen des Timers #########################################################
     else if( addr == 0xFF07 )
     {
        // https://gbdev.gg8.se/wiki/articles/Timer_and_Divider_Registers
+       // nicht sicher
        switch( data & 0x03 )
         {
             case 0: prog->clockSpeedCycles = CPU_SPEED_GAMEBOY/4096;    break ;//1024
@@ -415,7 +443,7 @@ void write_1byteData( uint16_t addr, uint8_t data )
         else
             prog->timerEnabled = 0;
     }
-    // DMA Transfer
+    // DMA Transfer ##################################################################
     else if( addr == 0xFF46 )
     {
         addr = data * 0x100;
@@ -424,12 +452,12 @@ void write_1byteData( uint16_t addr, uint8_t data )
             prog->memory[0xFE00 + i] = prog->memory[addr + i];
         }
     }
-    // Writing any value to register 0xff04 resets it to 0x00
+    // Writing any value to register 0xff04 resets it to 0x00 ########################
     else if( addr == 0xFF04 )
     {
         prog->memory[ 0xFF04 ] = 0x00;
     }
-    // write to ECHO ram == write into RAM
+    // write to ECHO ram == write into RAM ###########################################
     else if ( ( addr >= 0xE000 ) && (addr < 0xFE00) )
     {
         prog->memory[ addr ] = data;

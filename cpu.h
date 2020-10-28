@@ -7,31 +7,20 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define MEM_SIZE      0x200000
-#define GRAFICS_RAM_SIZE (0x9FFF-0x8000)
-#define EXTERNAL_RAM_SIZE (BFFF-A000)
-#define WORKING_RAM_SIZE (DFFF-C000)
-#define WORKING_RAM_SHADOW_SIZE (FDFF-E000)
-#define SPRITE_SIZE (FE9F-FE00)
-#define IO_SIZE (FF7F-FF00) // unhandled mamory
-#define ZERO_PAGE_RAM (FFFF-FF80)
-
-
-#define     TILES_NUM       360
-
-#define     CHARSET_START   0x050
-#define     CHARSET_END     0x0A0
+/// Speichergröße
+#define     MEM_SIZE        0xFFFF
+#define     MEM_BANK_SIZE   0x4000
 
 /// Lets debug!
-#define DEBUG_OPM   0
-#define DEBUG_STEP  0
+#define     DEBUG_OPM       0
+#define     DEBUG_STEP      0
 
 
-// Zum Einstellen der Flags
-#define UNMOD       3
-#define NOT         2
-#define SET         1
-#define UNSET       0
+/// Zum Einstellen der Flags
+#define     UNMOD           3
+#define     NOT             2
+#define     SET             1
+#define     UNSET           0
 
 /*************************************************************
 * simplify register handling
@@ -120,6 +109,8 @@ struct gameboy_t{
     uint16_t  sp;
     // Hauptspeicher
     uint8_t  memory[MEM_SIZE];
+    // Rom-Banks
+    uint8_t  rom_banks[4][MEM_BANK_SIZE];
     // Tasten --> Input 6 Buttons
     uint16_t  keys;
     // Struktur der Register AF BC DE HL
@@ -129,8 +120,7 @@ struct gameboy_t{
     uint8_t IR_req;
     // Für Grafikausgabe 160 Spalten und 144 Zeilen
     uint8_t ausgabeGrafik[144][160];
-    // Für BIOS anzeigen --> just for fun
-    uint8_t bios[0x100], bios_done;
+
     // Timer
     uint16_t deviderVariable;
     uint16_t timer;
@@ -142,6 +132,11 @@ struct gameboy_t{
     uint8_t displayMode;
     // Speicher für die Zyklenzahl
     uint32_t tikz;
+    // ROM Bank Management
+    uint16_t rombank;
+    uint16_t rambank;
+    uint8_t rambankenabled;
+    uint8_t ram_mode_selected;
 } gameboy_t;
 typedef struct gameboy_t gameboy;
 

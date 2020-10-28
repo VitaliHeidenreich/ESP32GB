@@ -1428,6 +1428,12 @@ void gb_opcode_exec( )
             PC = myVal;
             break;
 
+        case 0xCE:
+            // ADC A,u8
+            ADC( &REG_A, get_1byteData() );
+            INCREMENT(2);
+            break;
+
         case 0xCF:
             // RST 08h
             INCREMENT( 1 );
@@ -3093,5 +3099,10 @@ void gb_opcode_fetch( )
     #if (DEBUG_OPM==1)
         printf("After exec: 0x%02X @ 0x%04X: ",prog->opcode,PC);
     #endif //DEBUG_OPM
+
+    #if (DEBUG_OPM==2)
+        printf("%04X\n",PC);
+    #endif
+
 }
 
