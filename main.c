@@ -13,7 +13,7 @@
 #define FPS_Rate 60
 
 // it is just an example how to use roms
-char* filename = "../games/testroms/cpu_instrs/cpu_instrs.gb";//"../games/testroms/cpu_instrs/cpu_instrs.gb";//testroms/cpu_instrs.gb"; tetris.gb
+char* filename = "../games/Bubble.gb"; //"../games/testroms/cpu_instrs/cpu_instrs.gb";//"../games/DrMario.gb"; //"../games/testroms/cpu_instrs/cpu_instrs.gb";//"../games/testroms/cpu_instrs/cpu_instrs.gb";//testroms/cpu_instrs.gb"; tetris.gb
 
 int main(int argc, char** argv)
 {

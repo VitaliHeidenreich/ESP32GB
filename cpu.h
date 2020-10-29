@@ -8,8 +8,9 @@
 #include <stdio.h>
 
 /// Speichergröße
-#define     MEM_SIZE        0xFFFF
-#define     MEM_BANK_SIZE   0x4000
+#define     MEM_SIZE        0x10000
+#define     ROM_MEM_SIZE    0x4000
+#define     ROM_BANK_NUMB   4
 
 /// Lets debug!
 #define     DEBUG_OPM       0
@@ -110,7 +111,7 @@ struct gameboy_t{
     // Hauptspeicher
     uint8_t  memory[MEM_SIZE];
     // Rom-Banks
-    uint8_t  rom_banks[4][MEM_BANK_SIZE];
+    uint8_t  rom_bank_mem[ROM_BANK_NUMB][ROM_MEM_SIZE];
     // Tasten --> Input 6 Buttons
     uint16_t  keys;
     // Struktur der Register AF BC DE HL
@@ -133,7 +134,7 @@ struct gameboy_t{
     // Speicher für die Zyklenzahl
     uint32_t tikz;
     // ROM Bank Management
-    uint16_t rombank;
+    uint16_t rombanknumber;
     uint16_t rambank;
     uint8_t rambankenabled;
     uint8_t ram_mode_selected;

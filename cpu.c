@@ -91,7 +91,7 @@ gameboy* gb_start( )
     p->memory[0xFF06]  = 0x00;
     p->memory[0xFF07]  = 0x00;
     p->timer           = 0x00;
-    p->clockSpeedCycles= CPU_SPEED_GAMEBOY/4096;
+    p->clockSpeedCycles= 16;
     p->tikz = 0;
     p->displayMode = 4;
 
@@ -102,7 +102,7 @@ gameboy* gb_start( )
     p->memory[0xFFFF] = 0x00 ;
     //p->memory[0xFFFF] |= (1<<4);
     //Neu
-    p->rombank = 1;
+    p->rombanknumber = 1;
     p->rambankenabled = 0;
     p->ram_mode_selected = 0;
 
@@ -130,14 +130,18 @@ uint8_t gb_program_load( char* filename )
     uint32_t size = ftell(f);
     rewind(f);
 
-    if ( size > (MEM_SIZE) )
+    if ( size > (ROM_MEM_SIZE*ROM_BANK_NUMB) )
     {
         printf("Error: Nicht genug speicher vorhanden!: %i", size);
         return 1;
     }
 
     // Speichern der Datei im Buffer
-    fread(prog->memory, 1, MEM_SIZE, f);
+    fread(prog->rom_bank_mem, 1, (ROM_MEM_SIZE*ROM_BANK_NUMB), f);
+
+    // Lade initial den ROM-Speicher
+    for(uint32_t i; i < 0x8000; i++)
+        *(prog->memory+i)=*(prog->rom_bank_mem[0]+i);
 
     //load_bios( prog );
 
@@ -211,7 +215,7 @@ void gb_update_timer( uint16_t cycles )
 
     // DeviderRegister The Devider Is always Counting!
     prog->deviderVariable += cycles;
-    if( prog->deviderVariable >= CPU_SPEED_GAMEBOY/16384 )
+    if( prog->deviderVariable >= prog->clockSpeedCycles ) //CPU_SPEED_GAMEBOY/16384
     {
         prog->deviderVariable = 0;
         TIMER_DEVIDER_REGISTER_FF04 ++;
@@ -395,14 +399,19 @@ void write_1byteData( uint16_t addr, uint8_t data )
                 // ToDo --> Write the stored data to a safe place
         }
         // Switch ROM Bank !!! nicht sicher !!!
-        if( addr == 0x2000 )
+        else if( (addr >= 0x2000) && (addr<0x6000) )
         {
-            // TBD!
-            printf("\nROM Bank change request to %d.", data);
-            prog->rombank = data;
+            if( !prog->ram_mode_selected )
+            {
+                printf("\nROM Bank change request to %d on Addr 0x%04X", data, addr);
+                prog->rombanknumber = data;
+                // Lade die richtige ROM Bank in den Speicher
+                for(uint16_t i = 0; i < 0x4000; i++)
+                    *(prog->memory+0x4000+i) = *(prog->rom_bank_mem[prog->rombanknumber]+i);
+            }
         }
         // Select ROM or RAM mode
-        if( addr >= 0x6000 )
+        else
         {
             // 0x00 = ROM and 0x01 = RAM
             prog->ram_mode_selected = data;
@@ -428,13 +437,15 @@ void write_1byteData( uint16_t addr, uint8_t data )
     {
        // https://gbdev.gg8.se/wiki/articles/Timer_and_Divider_Registers
        // nicht sicher
+       printf("\nTimer wird eingestellt auf Option Nr.%i.\n", data);
+       data = data - 1;
        switch( data & 0x03 )
         {
             case 0: prog->clockSpeedCycles = CPU_SPEED_GAMEBOY/4096;    break ;//1024
             case 1: prog->clockSpeedCycles = CPU_SPEED_GAMEBOY/268400;  break;//16
             case 2: prog->clockSpeedCycles = CPU_SPEED_GAMEBOY/65536;   break ;//64
             case 3: prog->clockSpeedCycles = CPU_SPEED_GAMEBOY/16384;   break ;//256
-            default: break ;
+            default: printf("\nTimereinstellung kann nicht gemacht werden da Option %i nicht existiert.\n", data); break ;
         }
         prog->memory[ 0xFF07 ] = data;
         // Bit 2: 0 = Stop and 1 = Start timer
