@@ -158,9 +158,11 @@ uint8_t gb_program_load( char* filename )
 // Herzstueck des Gameboys
 void gb_program_cycle( )
 {
-    while( prog->tikz < MAX_TICKS )
+    while( prog->tikz <= MAX_TICKS )
     {
+        // Lese operation
         gb_opcode_fetch( );
+        // Führe die Operation aus
         gb_opcode_exec( ); // HALT wird im Exec abgefangen
 
         gb_update_timer( prog->tikz );
@@ -192,11 +194,12 @@ void gb_program_cycle( )
 void gb_update_timer( uint16_t cycles )
 {
     static uint16_t incrementerTimer = 0;
+    static uint32_t lastCycles = 0;
 
     // Do only if timer is started bit2 = 1
     if ( TIMER_CONTROL_REGISTER_FF07 & 0x04 )
     {
-        incrementerTimer += cycles;
+        incrementerTimer += cycles - lastCycles;
         // Umrechnen der Taktfrequenz zum Inkrementieren des Timers
         if( incrementerTimer >= prog->clockSpeedCycles )
         {
@@ -214,12 +217,14 @@ void gb_update_timer( uint16_t cycles )
     }
 
     // DeviderRegister The Devider Is always Counting!
-    prog->deviderVariable += cycles;
+    prog->deviderVariable += cycles - lastCycles;
     if( prog->deviderVariable >= prog->clockSpeedCycles ) //CPU_SPEED_GAMEBOY/16384
     {
         prog->deviderVariable = 0;
         TIMER_DEVIDER_REGISTER_FF04 ++;
     }
+
+    lastCycles = cycles;
 }
 
 /**************************************************************************************
@@ -350,6 +355,9 @@ uint8_t get_1byteData(  )
 ************************************************************************************/
 uint8_t get_1byteDataFromAddr(  uint16_t addr )
 {
+    if( addr == 0xFF07 )
+        printf("\n0xFF07 wird gelesen\n");
+
     static uint8_t lastButonState = 0;
 
     if( addr == 0xFF00 )
@@ -405,9 +413,10 @@ void write_1byteData( uint16_t addr, uint8_t data )
             {
                 printf("\nROM Bank change request to %d on Addr 0x%04X", data, addr);
                 prog->rombanknumber = data;
+                if( data == 0 ) data = 1;
                 // Lade die richtige ROM Bank in den Speicher
                 for(uint16_t i = 0; i < 0x4000; i++)
-                    *(prog->memory+0x4000+i) = *(prog->rom_bank_mem[prog->rombanknumber]+i);
+                    *(prog->memory + 0x4000 + i) = *(prog->rom_bank_mem[prog->rombanknumber] + i);
             }
         }
         // Select ROM or RAM mode
@@ -438,16 +447,16 @@ void write_1byteData( uint16_t addr, uint8_t data )
        // https://gbdev.gg8.se/wiki/articles/Timer_and_Divider_Registers
        // nicht sicher
        printf("\nTimer wird eingestellt auf Option Nr.%i.\n", data);
-       data = data - 1;
+
        switch( data & 0x03 )
         {
             case 0: prog->clockSpeedCycles = CPU_SPEED_GAMEBOY/4096;    break ;//1024
             case 1: prog->clockSpeedCycles = CPU_SPEED_GAMEBOY/268400;  break;//16
             case 2: prog->clockSpeedCycles = CPU_SPEED_GAMEBOY/65536;   break ;//64
             case 3: prog->clockSpeedCycles = CPU_SPEED_GAMEBOY/16384;   break ;//256
-            default: printf("\nTimereinstellung kann nicht gemacht werden da Option %i nicht existiert.\n", data); break ;
+            default: break ;
         }
-        prog->memory[ 0xFF07 ] = data;
+        //prog->memory[ 0xFF07 ] = data;
         // Bit 2: 0 = Stop and 1 = Start timer
         if( data & 0x04 )
             prog->timerEnabled = 1;
@@ -466,6 +475,7 @@ void write_1byteData( uint16_t addr, uint8_t data )
     // Writing any value to register 0xff04 resets it to 0x00 ########################
     else if( addr == 0xFF04 )
     {
+        printf("\nTimer reseted to 0\n");
         prog->memory[ 0xFF04 ] = 0x00;
     }
     // write to ECHO ram == write into RAM ###########################################

@@ -51,7 +51,6 @@
 #define     SP      (prog->sp)
 ///***********************************************************
 
-#define     DEBUG         0
 #define     MAX_TICKS     70224//69905
 
 struct registers_t {

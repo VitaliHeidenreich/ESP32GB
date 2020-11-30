@@ -75,17 +75,21 @@ void gb_opcode_exec( )
         static uint32_t stepNum = 0;
         static uint16_t stopOnPC = 0x022f;
     #endif // DEBUG_STEP
+
     uint16_t myVal = 0;
     int mySignVal = 0;
 
     // Dauer des auszuführenden Codes in Zyklen
     if(prog->opcode != 0xCB)
+    {
         prog->tikz += InstructionTicks[ prog->opcode ];
+    }
+
 
     // Warten auf Event (Eingabe, Interrupt)
     if( prog->halt )
     {
-        // printf("Halt aktiv.\n");
+         // nop -- printf("Halt aktiv.\n");
     }
     else
     {
@@ -1700,10 +1704,8 @@ void gb_opcode_exec( )
         }
     }
 
-
-
     #if (DEBUG_OPM==1)
-        printf("AF=0x%04X, BC=0x%04X, DE=0x%04X, HL=0x%04X, SP=0x%04X, PC:=0x%04X\n",REG_AF,REG_BC,REG_DE,REG_HL,SP,PC);
+        //printf("AF=0x%04X, BC=0x%04X, DE=0x%04X, HL=0x%04X, SP=0x%04X, PC:=0x%04X\n",REG_AF,REG_BC,REG_DE,REG_HL,SP,PC);
     #endif // DEBUG_OPM
 
     #if DEBUG_STEP
@@ -3097,12 +3099,7 @@ void gb_opcode_fetch( )
 {
     prog->opcode = prog->memory[ PC ];
     #if (DEBUG_OPM==1)
-        printf("After exec: 0x%02X @ 0x%04X: ",prog->opcode,PC);
+        printf("0x%02X @ 0x%04X\n",prog->opcode,PC);
     #endif //DEBUG_OPM
-
-    #if (DEBUG_OPM==2)
-        printf("%04X\n",PC);
-    #endif
-
 }
 
