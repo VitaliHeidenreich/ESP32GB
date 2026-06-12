@@ -1421,6 +1421,7 @@ void gb_opcode_exec( )
             myVal = get_2byteData(  );
             INCREMENT( 3 );
             if( getZeroFlag( ))
+                push_to_stack( PC );
                 PC = myVal;
             break;
 
